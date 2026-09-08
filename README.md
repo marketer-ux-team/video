@@ -22,10 +22,43 @@ werden als Scroll-Animationen auf der Website genutzt; sie bleiben unberührt.
 | `hero/esc-loop-720-v1.mp4` | 1,8 MiB | ESC-Karte in der Referenzen-Section der Startseite. Stummer 10-Sekunden-Loop, startet beim Scrollen. |
 | `animation-*.webm` / `animation-*.mov` | | Ältere Scroll-Animationen, unverändert. |
 
-Die HTML-Schnipsel für die beiden Webflow-Embeds sowie für Page-Head und Page-Footer der
-Startseite liegen unter `webflow/`. Sie werden im Webflow-Designer per Copy-Paste eingesetzt, weil
-sich Embed-Inhalte über die Data-API nicht schreiben lassen. `webflow/hero-css-patch.md`
-beschreibt die wenigen Zeilen, die im bestehenden Hero-Style-Embed anzupassen sind.
+## Der Ordner `webflow/`
+
+Hier liegt der Webflow-Teil der Umstellung: die beiden Embed-Inhalte und der komplette Custom Code
+der Startseite (Site `64889a266012bdd6373f2952`, Page `69e355534b2b266220042310`).
+
+| Datei | Was |
+|---|---|
+| `home-head.html` | **Vollständiger** neuer Page-Head-Code der Startseite. Identisch zum Original bis auf die vier Wistia-`preconnect`/`dns-prefetch`-Zeilen, die durch einen `preconnect` auf `video-lyart-one.vercel.app` ersetzt sind. |
+| `home-footer.html` | **Vollständiger** neuer Page-Footer-Code. Der Wistia-iframe-Block ist durch das Click-to-play-Script für natives `<video>` ersetzt; das doppelt vorhandene `[data-video-src]`-Script steht nur noch einmal drin. Alle übrigen Blöcke (ouibounce, Testimonial-Höhen, GSAP-Branchen, Partnerschaftsdauer, `[play-by-scroll]`) sind unverändert. |
+| `backup/home-head-original.html` | Page-Head-Code, wie er vor der Umstellung live war. Byte-genau über die Webflow-API gelesen. |
+| `backup/home-footer-original.html` | Page-Footer-Code, wie er vor der Umstellung live war. Byte-genau über die Webflow-API gelesen. |
+| `hero-embed.html` | Neuer Inhalt des Hero-Embeds (Element `adfa4dd4-1781-1c9b-e2db-8832ca189328`). |
+| `esc-embed.html` | Neuer Inhalt der ESC-Karte (Element `adfa4dd4-1781-1c9b-e2db-8832ca18955e`). |
+| `hero-css-patch.md` | Die wenigen Zeilen, die im bestehenden Hero-Style-Embed anzupassen sind. |
+| `home-head-snippet.html`, `home-footer-snippet.html` | Erste Entwürfe, nur noch als Referenz. Maßgeblich sind die vollständigen `home-head.html` / `home-footer.html`. |
+
+Die Embed-Inhalte werden im Designer per Copy-Paste eingesetzt, weil sich HtmlEmbed-Inhalte über die
+Data-API nicht schreiben lassen. Head und Footer sollten über die API laufen
+(`data_scripts_tool > set_page_freeform_code`) — **das schlägt derzeit mit `HTTP 406` fehl**, während
+Lesen (`get_page_freeform_code`) funktioniert. Bis das geklärt ist, lassen sich `home-head.html` und
+`home-footer.html` genauso per Copy-Paste in die Page-Settings der Startseite einsetzen; beide
+Dateien sind vollständig und ersetzen den jeweiligen Block als Ganzes.
+
+### Das Click-to-play-Script
+
+Es reagiert auf `[data-video-trigger]` (neues Embed) und zusätzlich auf `[dd-wistia-video-trigger]`
+(altes Embed, solange es im Designer noch nicht getauscht ist). Im Legacy-Fall kommen die URLs aus
+Konstanten im Script, und das Vorschaubild `img.hero-video_thumbnail` wird beim Laden auf das
+selbst gehostete WebP umgeschrieben — so wird auch ohne Embed-Tausch kein Bild mehr von Wistia
+geladen. Das erzeugte `<video>` bekommt Inline-Styles (`position:absolute; inset:0; …
+object-fit:cover`), liegt also auch dann richtig, wenn der CSS-Patch aus `hero-css-patch.md` noch
+nicht eingespielt ist.
+
+Eine Falle beim Lesen der Quellen: `data-video-src-1080` landet **nicht** unter
+`dataset.videoSrc1080`. Die Umwandlung in camelCase greift nur, wenn auf den Bindestrich ein
+Kleinbuchstabe folgt — bei einer Ziffer bleibt der Bindestrich stehen, der Schlüssel heißt also
+`dataset["videoSrc-1080"]`. Das Script liest diese Attribute deshalb mit `getAttribute()`.
 
 ## Versionierung: niemals eine Datei überschreiben
 

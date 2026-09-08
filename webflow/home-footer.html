@@ -1,0 +1,230 @@
+<!-- Start Exit Intent Popup -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ouibounce/0.0.12/ouibounce.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const HERO = {
+    src1080: "https://video-lyart-one.vercel.app/hero/hero-1080-v1.mp4",
+    src720: "https://video-lyart-one.vercel.app/hero/hero-720-v1.mp4",
+    poster: "https://video-lyart-one.vercel.app/hero/hero-poster-v1.webp",
+    vtt: "https://video-lyart-one.vercel.app/hero/hero-de-v1.vtt"
+  };
+
+  const VIDEO_STYLE =
+    "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000;border:0";
+
+  document
+    .querySelectorAll("[data-video-trigger], [dd-wistia-video-trigger]")
+    .forEach((button) => {
+      const legacy = !button.hasAttribute("data-video-trigger");
+
+      const sources = legacy
+        ? HERO
+        : {
+            // NB: data-video-src-1080 maps to dataset["videoSrc-1080"], not
+            // dataset.videoSrc1080 (the dash is followed by a digit), so read
+            // these through getAttribute.
+            src1080: button.getAttribute("data-video-src-1080"),
+            src720: button.getAttribute("data-video-src-720"),
+            poster: button.getAttribute("data-video-poster") || "",
+            vtt: button.getAttribute("data-video-vtt") || ""
+          };
+
+      // Legacy embed (not yet swapped in the Designer): repoint the thumbnail
+      // at the self-hosted poster so no third-party image is requested.
+      if (legacy && sources.poster) {
+        const thumbnail = button.querySelector("img.hero-video_thumbnail");
+
+        if (thumbnail) {
+          thumbnail.removeAttribute("srcset");
+          thumbnail.src = sources.poster;
+        }
+      }
+
+      button.addEventListener("click", () => {
+        const wrapper = button.closest(
+          "[data-video-wrapper], [dd-wistia-video-wrapper]"
+        );
+
+        if (!wrapper || button.disabled) return;
+
+        const wide = window.matchMedia("(min-width: 768px)").matches;
+        const src = wide ? sources.src1080 : sources.src720;
+
+        if (!src) return;
+
+        button.disabled = true;
+        button.classList.add("is-loading");
+
+        const video = document.createElement("video");
+
+        video.src = src;
+        video.poster = sources.poster || "";
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = "auto";
+        video.disablePictureInPicture = true;
+        video.setAttribute("controlslist", "nodownload");
+        video.setAttribute("style", VIDEO_STYLE);
+
+        if (sources.vtt) {
+          const track = document.createElement("track");
+
+          track.kind = "subtitles";
+          track.srclang = "de";
+          track.label = "Deutsch";
+          track.default = true;
+          track.src = sources.vtt;
+
+          video.appendChild(track);
+        }
+
+        const reveal = () => {
+          wrapper.classList.add("is-loaded");
+          button.classList.remove("is-loading");
+        };
+
+        video.addEventListener("playing", reveal, { once: true });
+
+        wrapper.appendChild(video);
+
+        video.play().catch(reveal);
+      });
+    });
+});
+</script>
+
+<script>
+  function checkTestimonialHeights() {
+  const cards = document.querySelectorAll('.testimonial-card_content');
+
+  cards.forEach(card => {
+    const textContainer = card.querySelector('.testimonial_text-wrapper');
+    const button = card.querySelector('.testimonial_item-butonns');
+
+    if (!textContainer || !button) return;
+
+    // scrollHeight = total height of the content inside
+    // clientHeight = actual visible height (capped at 8rem by CSS)
+    const isOverflowing = textContainer.scrollHeight > textContainer.clientHeight;
+
+    if (!isOverflowing) {
+      button.classList.add('disabled');
+    } else {
+      button.classList.remove('disabled');
+    }
+  });
+}
+
+// Run the check once the DOM content is fully loaded
+document.addEventListener('DOMContentLoaded', checkTestimonialHeights);
+
+// OPTIONAL: If your CMS content loads dynamically or uses heavy custom web fonts,
+// you might want to run it on 'load' to ensure the heights are calculated accurately.
+window.addEventListener('load', checkTestimonialHeights);
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  gsap.registerPlugin(ScrollTrigger);
+
+  const wrapper = document.querySelector(".branches_wrapper");
+  const track = document.querySelector(".branchen_track");
+
+  if (!wrapper || !track) return;
+
+  // Move only part of the available distance
+  const distance = (track.scrollHeight - wrapper.offsetHeight) * 0.6;
+
+  gsap.fromTo(
+    track,
+    { y: 0 },
+    {
+      y: -distance,
+      ease: "none",
+      scrollTrigger: {
+        trigger: wrapper,
+
+        // Animation starts when the section enters the viewport
+        start: "top 90%",
+
+        // Animation finishes before the section completely leaves
+        end: "bottom 10%",
+
+        // Higher value = smoother movement
+        scrub: 3,
+
+        // Recalculate values on resize
+        invalidateOnRefresh: true
+      }
+    }
+  );
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .querySelectorAll("[data-video-src]")
+    .forEach(wrapper => {
+      const video = wrapper.querySelector("video");
+      const src = wrapper.dataset.videoSrc;
+
+      if (!video || !src) return;
+
+      video.pause();
+
+      video
+        .querySelectorAll("source")
+        .forEach(source => source.remove());
+
+      video.removeAttribute("src");
+
+      video.src = src;
+      video.muted = true;
+      video.loop = true;
+      video.autoplay = true;
+      video.playsInline = true;
+
+      video.load();
+      video.play().catch(() => {});
+    });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const startYear = 2017;
+  const duration = new Date().getFullYear() - startYear;
+
+  document
+    .querySelectorAll("[webflow-partnership-duration]")
+    .forEach(element => {
+      element.textContent = duration;
+    });
+});
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(({ target, isIntersecting }) => {
+        const video = target.querySelector("video");
+        if (!video) return;
+
+        if (isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll("[play-by-scroll]").forEach((item) => {
+      const video = item.querySelector("video");
+      if (video) video.pause();
+
+      observer.observe(item);
+    });
+  });
+</script>

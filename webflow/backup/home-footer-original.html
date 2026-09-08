@@ -1,0 +1,226 @@
+<!-- Start Exit Intent Popup -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ouibounce/0.0.12/ouibounce.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .querySelectorAll("[dd-wistia-video-trigger]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const wrapper = button.closest(
+          "[dd-wistia-video-wrapper]"
+        );
+
+        const videoId = button.getAttribute(
+          "dd-wistia-video-id"
+        );
+
+        if (!wrapper || !videoId || button.disabled) return;
+
+        button.disabled = true;
+        button.classList.add("is-loading");
+
+        const iframe = document.createElement("iframe");
+
+        const params = new URLSearchParams({
+          web_component: "true",
+          videoFoam: "true",
+          autoPlay: "true",
+          silentAutoPlay: "allow",
+          volume: "1"
+        });
+
+        iframe.src =
+          `https://fast.wistia.net/embed/iframe/${videoId}?${params}`;
+
+        iframe.title = "Testen auf der Hauptseite";
+        iframe.allow =
+          "autoplay; fullscreen; encrypted-media; picture-in-picture";
+        iframe.allowFullscreen = true;
+        iframe.setAttribute("allowtransparency", "true");
+        iframe.setAttribute("scrolling", "no");
+        iframe.className = "wistia_embed";
+
+        iframe.addEventListener(
+          "load",
+          () => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                wrapper.classList.add("is-loaded");
+                button.classList.remove("is-loading");
+              });
+            });
+          },
+          { once: true }
+        );
+
+        wrapper.appendChild(iframe);
+      });
+    });
+});
+</script>
+
+<script>
+  function checkTestimonialHeights() {
+  const cards = document.querySelectorAll('.testimonial-card_content');
+
+  cards.forEach(card => {
+    const textContainer = card.querySelector('.testimonial_text-wrapper');
+    const button = card.querySelector('.testimonial_item-butonns');
+
+    if (!textContainer || !button) return;
+
+    // scrollHeight = total height of the content inside
+    // clientHeight = actual visible height (capped at 8rem by CSS)
+    const isOverflowing = textContainer.scrollHeight > textContainer.clientHeight;
+
+    if (!isOverflowing) {
+      button.classList.add('disabled');
+    } else {
+      button.classList.remove('disabled');
+    }
+  });
+}
+
+// Run the check once the DOM content is fully loaded
+document.addEventListener('DOMContentLoaded', checkTestimonialHeights);
+
+// OPTIONAL: If your CMS content loads dynamically or uses heavy custom web fonts,
+// you might want to run it on 'load' to ensure the heights are calculated accurately.
+window.addEventListener('load', checkTestimonialHeights);
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  gsap.registerPlugin(ScrollTrigger);
+
+  const wrapper = document.querySelector(".branches_wrapper");
+  const track = document.querySelector(".branchen_track");
+
+  if (!wrapper || !track) return;
+
+  // Move only part of the available distance
+  const distance = (track.scrollHeight - wrapper.offsetHeight) * 0.6;
+
+  gsap.fromTo(
+    track,
+    { y: 0 },
+    {
+      y: -distance,
+      ease: "none",
+      scrollTrigger: {
+        trigger: wrapper,
+
+        // Animation starts when the section enters the viewport
+        start: "top 90%",
+
+        // Animation finishes before the section completely leaves
+        end: "bottom 10%",
+
+        // Higher value = smoother movement
+        scrub: 3,
+
+        // Recalculate values on resize
+        invalidateOnRefresh: true
+      }
+    }
+  );
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .querySelectorAll("[data-video-src]")
+    .forEach(wrapper => {
+      const video = wrapper.querySelector("video");
+      const src = wrapper.dataset.videoSrc;
+
+      if (!video || !src) return;
+
+      video.pause();
+
+      video
+        .querySelectorAll("source")
+        .forEach(source => source.remove());
+
+      video.removeAttribute("src");
+
+      video.src = src;
+      video.muted = true;
+      video.loop = true;
+      video.autoplay = true;
+      video.playsInline = true;
+
+      video.load();
+      video.play().catch(() => {});
+    });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const startYear = 2017;
+  const duration = new Date().getFullYear() - startYear;
+
+  document
+    .querySelectorAll("[webflow-partnership-duration]")
+    .forEach(element => {
+      element.textContent = duration;
+    });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .querySelectorAll("[data-video-src]")
+    .forEach(wrapper => {
+      const video = wrapper.querySelector("video");
+      const src = wrapper.dataset.videoSrc;
+
+      if (!video || !src) return;
+
+      video.pause();
+
+      video
+        .querySelectorAll("source")
+        .forEach(source => source.remove());
+
+      video.removeAttribute("src");
+
+      video.src = src;
+      video.muted = true;
+      video.loop = true;
+      video.autoplay = true;
+      video.playsInline = true;
+
+      video.load();
+      video.play().catch(() => {});
+    });
+});
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(({ target, isIntersecting }) => {
+        const video = target.querySelector("video");
+        if (!video) return;
+
+        if (isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll("[play-by-scroll]").forEach((item) => {
+      const video = item.querySelector("video");
+      if (video) video.pause();
+
+      observer.observe(item);
+    });
+  });
+</script>

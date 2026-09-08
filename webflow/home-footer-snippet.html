@@ -1,0 +1,33 @@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("[data-video-trigger]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const wrapper = button.closest("[data-video-wrapper]");
+      if (!wrapper || button.disabled) return;
+      const wide = window.matchMedia("(min-width: 768px)").matches;
+      const src = wide ? button.dataset.videoSrc1080 : button.dataset.videoSrc720;
+      if (!src) return;
+      button.disabled = true;
+      button.classList.add("is-loading");
+      const video = document.createElement("video");
+      video.src = src;
+      video.poster = button.dataset.videoPoster || "";
+      video.controls = true;
+      video.playsInline = true;
+      video.preload = "auto";
+      video.disablePictureInPicture = true;
+      video.setAttribute("controlslist", "nodownload");
+      if (button.dataset.videoVtt) {
+        const track = document.createElement("track");
+        track.kind = "subtitles"; track.srclang = "de"; track.label = "Deutsch";
+        track.src = button.dataset.videoVtt;
+        video.appendChild(track);
+      }
+      const reveal = () => { wrapper.classList.add("is-loaded"); button.classList.remove("is-loading"); };
+      video.addEventListener("playing", reveal, { once: true });
+      wrapper.appendChild(video);
+      video.play().catch(reveal);
+    });
+  });
+});
+</script>

@@ -120,10 +120,17 @@
   background: rgba(0, 0, 0, 0.25);
 }
 
-/* Untertitel 1,5-fach: Chrome und Safari leiten die Basisgröße der Cues aus der
-   Videohöhe ab, 150 % skaliert relativ dazu und bleibt darum responsiv. */
-.hero_video-wrapper video::cue {
-  font-size: 150%;
+/* Die Untertitelgröße steht bewusst NICHT hier: Prozent- und em-Angaben in
+   ::cue beziehen sich in WebKit auf eine andere Basis als in Chrome — auf dem
+   iPhone wurde aus "150 %" ein Vielfaches, das vier Zeilen ins Video schrieb.
+   Das Script unten leitet die Größe deshalb als feste px-Zahl aus der
+   gerenderten Videohöhe ab und injiziert sie pro Wrapper. */
+
+/* Ohne native Bedienleiste ist der Fokusring die einzige Rückmeldung für die
+   Tastatur-Bedienung. */
+.hero_video-wrapper video:focus-visible {
+  outline: 3px solid #2f6fd6;
+  outline-offset: -3px;
 }
 
 @keyframes hero-loader {
@@ -146,6 +153,24 @@ document.addEventListener("DOMContentLoaded", () => {
   // mittigen Play-Button und einen Klick aufs Video gesteuert.
   const VIDEO_STYLE =
     "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000;border:0;cursor:pointer";
+
+  // Untertitelgröße als Anteil der gerenderten Videohöhe. Chrome und Safari
+  // setzen die Cues von Haus aus auf 5 % der Videohöhe (in Chrome 152
+  // nachgemessen: 940×529 → 26,5 px), 0,055 liegt also rund 1,1-fach darüber —
+  // spürbar größer als vorher, weit weg von den 1,5-fach, die auf dem iPhone
+  // aus dem Ruder liefen.
+  const CUE_FACTOR = 0.055;
+  const CUE_MIN_PX = 12;
+  const CUE_SELECTOR = ".hero_video-wrapper video::cue";
+
+  // Space, Enter und "k" (Konvention aus den großen Playern) schalten zwischen
+  // Wiedergabe und Pause um.
+  const isToggleKey = (event) =>
+    event.key === " " ||
+    event.key === "Spacebar" ||
+    event.key === "Enter" ||
+    event.key === "k" ||
+    event.key === "K";
 
   document
     .querySelectorAll("[data-video-trigger], [dd-wistia-video-trigger]")
@@ -179,6 +204,34 @@ document.addEventListener("DOMContentLoaded", () => {
           thumbnail.removeAttribute("srcset");
           thumbnail.src = sources.poster;
         }
+      }
+
+      // Deterministische Untertitelgröße: aus der gerenderten Videohöhe eine
+      // px-Zahl rechnen und als eigene Regel injizieren. Das ist in Chrome,
+      // Safari (macOS und iOS), Firefox und Edge identisch — anders als
+      // Prozent- oder em-Angaben in ::cue.
+      const cueStyle = document.createElement("style");
+
+      wrapper.appendChild(cueStyle);
+
+      const applyCueSize = () => {
+        const h = wrapper.getBoundingClientRect().height;
+
+        if (!h) return;
+
+        const px = Math.max(CUE_MIN_PX, Math.round(h * CUE_FACTOR));
+
+        cueStyle.textContent = CUE_SELECTOR + " { font-size: " + px + "px; }";
+      };
+
+      applyCueSize();
+
+      // Der Wrapper skaliert mit der Spaltenbreite: bei jeder Größenänderung
+      // neu rechnen (ResizeObserver ist Baseline, window.resize als Rückfall).
+      if (typeof ResizeObserver === "function") {
+        new ResizeObserver(applyCueSize).observe(wrapper);
+      } else {
+        window.addEventListener("resize", applyCueSize);
       }
 
       let video = null;
@@ -218,6 +271,11 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         element.setAttribute("style", VIDEO_STYLE);
         element.setAttribute("aria-label", "Testen auf der Hauptseite");
+
+        // Ohne native Controls ist das Video nicht fokussierbar — ohne
+        // tabindex gäbe es keine Tastatur-Bedienung.
+        element.tabIndex = 0;
+        element.setAttribute("tabindex", "0");
 
         if (sources.vtt) {
           const track = document.createElement("track");
@@ -273,12 +331,32 @@ document.addEventListener("DOMContentLoaded", () => {
           event.preventDefault();
         });
 
+        // Kontextmenü sperren: Safari und Firefox bieten dort sonst
+        // "Bild-in-Bild", "Video sichern" und "Vollbild" an.
+        element.addEventListener("contextmenu", (event) => {
+          event.preventDefault();
+        });
+
+        // Tastatur: preventDefault verhindert bei der Leertaste zusätzlich das
+        // Scrollen der Seite.
+        element.addEventListener("keydown", (event) => {
+          if (!isToggleKey(event)) return;
+
+          event.preventDefault();
+
+          if (element.paused) {
+            element.play().catch(() => {});
+          } else {
+            element.pause();
+          }
+        });
+
         wrapper.appendChild(element);
 
         return element;
       };
 
-      button.addEventListener("click", () => {
+      const activate = () => {
         if (button.classList.contains("is-loading")) return;
 
         if (!video) {
@@ -297,6 +375,18 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           video.pause();
         }
+      };
+
+      button.addEventListener("click", activate);
+
+      // Space und Enter lösen den Button nativ aus — weil preventDefault
+      // (gegen das Scrollen) diesen synthetischen Klick unterdrückt, schaltet
+      // hier der Aufruf selbst um. "k" kommt zusätzlich dazu.
+      button.addEventListener("keydown", (event) => {
+        if (!isToggleKey(event)) return;
+
+        event.preventDefault();
+        activate();
       });
     });
 });

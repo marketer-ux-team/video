@@ -57,9 +57,44 @@ wird ausschließlich über den mittigen Play-Button und einen Klick aufs Video.
 - **Ende:** `is-loaded` fällt weg, `currentTime` geht auf 0 — Vorschaubild und Play-Button stehen
   wieder wie am Anfang, der nächste Klick spielt von vorn.
 - **Untertitel** bleiben über `<track … default>` eingeblendet. Der Track ist Cross-Origin, deshalb
-  ist `crossOrigin = "anonymous"` Pflicht (sonst bleiben die Cues leer). `video::cue` setzt sie auf
-  `font-size: 150%`; Chrome und Safari leiten die Basisgröße aus der Videohöhe ab, die Angabe bleibt
-  damit auf jedem Viewport proportional.
+  ist `crossOrigin = "anonymous"` Pflicht (sonst bleiben die Cues leer). Zur Größe siehe den
+  folgenden Absatz.
+- **Bedienung ohne Maus:** das erzeugte `<video>` bekommt `tabindex="0"` und einen sichtbaren
+  Fokusring (`video:focus-visible`). Leertaste, Enter und `k` schalten auf Video **und** Button
+  zwischen Wiedergabe und Pause. Der Button ist nativ mit Leertaste/Enter auslösbar; weil
+  `preventDefault` (gegen das Scrollen) diesen synthetischen Klick unterdrückt, schaltet der
+  `keydown`-Handler selbst um — sonst käme es zum Doppel-Toggle.
+- **Kein Kontextmenü auf dem Video** (`contextmenu` → `preventDefault`): Safari und Firefox bieten
+  dort sonst „Bild-in-Bild", „Video sichern" und „Vollbild" an. Im Pausenzustand liegt das
+  Button-Overlay über dem Video, dort greift der Handler nicht — das native Menü gehört dann zum
+  Button, nicht zum Video.
+
+**Untertitelgröße — keine Prozentangabe in `::cue`.** Bis V3 stand `video::cue { font-size: 150% }`
+statisch im Embed. In Chrome ergibt das das Erwartete (1,5-fache der Standardgröße), auf iOS Safari
+dagegen riesigen Text: WebKit bezieht die Prozentangabe auf eine andere Basis. Auf einem iPhone 17 Pro
+(Simulator, Video 402 × 226 CSS-px) belegte derselbe einzeilige Cue mit `150 %` **40,6 % der
+Videohöhe** über zwei Zeilen und lief bis über den Play-Button — Kundenmeldung bestätigt.
+
+Seit V4 steht in `::cue` deshalb **kein `%` und kein `em` mehr**. Stattdessen rechnet das
+Embed-Script aus der gerenderten Wrapperhöhe eine feste px-Größe und injiziert sie als eigene Regel
+in ein `<style>`-Element im Wrapper:
+
+```js
+const px = Math.max(12, Math.round(wrapper.getBoundingClientRect().height * 0.055));
+cueStyle.textContent = ".hero_video-wrapper video::cue { font-size: " + px + "px; }";
+```
+
+`applyCueSize()` läuft beim Aufbau und danach an einem `ResizeObserver` auf dem Wrapper
+(`window.resize` als Rückfall), der Wert folgt also der Spaltenbreite. Gemessen: Desktop 1280 px →
+Wrapper 529 px → **29 px**, Mobile 390 px → Wrapper 219 px → **12 px** (Untergrenze), iPhone 17 Pro →
+Wrapper 226 px → **12 px**. Beim Viewport-Wechsel auf derselben Seite rechnet die Regel neu
+(29 → 12 → 29).
+
+Der Faktor 0,055 ist bewusst dicht an der Standardgröße: **Chrome und Safari setzen Cues von Haus aus
+auf 5 % der Videohöhe** (in Chrome 152 kalibriert — Cue-Box-Breite wächst linear mit
+13,0 px je Schrift-px, die Standardgröße rechnet sich damit zu 26,5 px auf einem 529 px hohen Video).
+0,055 liegt also rund **1,1-fach** darüber. Wer die Untertitel deutlicher größer will, dreht allein an
+`CUE_FACTOR` — 0,065 wären 1,3-fach. Auf iOS belegt eine Zeile damit 8,2 % der Videohöhe statt 40,6 %.
 
 **Untertitelposition:** dafür ist bewusst *nichts* eingestellt. Es lag der Verdacht nahe, dass die
 Cue-Box mit 150 % unten aus dem Video läuft und über WebVTT-Cue-Settings (`line:-3`) angehoben werden
@@ -124,6 +159,14 @@ Kleinbuchstabe folgt — bei einer Ziffer bleibt der Bindestrich stehen, der Sch
 Das `<video>` bekommt `crossOrigin = "anonymous"`. Ohne CORS-Modus lädt der Browser die
 Untertitel-Datei vom fremden Origin nicht (die `<track>`-Cues bleiben leer); Vercel sendet
 `access-control-allow-origin: *`, mehr ist nicht nötig. Live in Chrome geprüft: 90 Cues.
+
+Nichts im Script ist Chrome-only: `matchMedia`, `closest`, `textTracks`, `ResizeObserver`
+(mit `window.resize` als Rückfall) und Pfeilfunktionen sind überall Baseline — kein `?.`, kein
+`??`, keine privaten Felder. Verifiziert in echten Engines über Playwright (Chromium, Firefox,
+WebKit, je Desktop 1280 × 800 und Mobile 390 × 844, beide Embeds): 264 Checks grün, darunter
+Wiedergabe mit Ton, geladene Cues, injizierte px-Regel, Klick- und Tastatur-Bedienung sowie der
+unterdrückte Rechtsklick. In Firefox erscheint beim Hover über dem laufenden Video **kein**
+Bild-in-Bild-Umschalter — `disablePictureInPicture` wird respektiert.
 
 ## Versionierung: niemals eine Datei überschreiben
 
@@ -193,4 +236,5 @@ cwebp -q 80 -resize 960 540 still.jpg -o wel-poster-v1.webp
 
 Untertitel wie beim Hero aus `https://fast.wistia.com/embed/captions/zpebt984kw.json`, 73 Cues.
 Ohne Cue-Settings (`line:` & Co.) — Chrome und Safari setzen die Untertitel von selbst korrekt
-unten ins Video, auch mit `::cue { font-size: 150% }`; siehe den Absatz zur Untertitelposition.
+unten ins Video; siehe den Absatz zur Untertitelposition. Die Größe kommt wie beim Hero aus dem
+Script (`CUE_FACTOR`, Selektor `.wel_video-wrapper video::cue`), nicht aus einer statischen Regel.

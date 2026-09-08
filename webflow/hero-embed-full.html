@@ -37,6 +37,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: opacity 0.35s ease;
 }
 
 .hero-video_play {
@@ -90,6 +91,7 @@
   height: 100%;
   border: 0;
   opacity: 0;
+  cursor: pointer;
   transition: opacity 0.35s ease;
 }
 
@@ -100,6 +102,17 @@
 .hero_video-wrapper.is-loaded .hero-video {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Pausiert: Play-Button über dem stehenden Bild, Vorschaubild bleibt unsichtbar. */
+.hero_video-wrapper.is-loaded.is-paused .hero-video {
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.hero_video-wrapper.is-loaded.is-paused .hero-video_thumbnail {
+  opacity: 0;
 }
 
 @keyframes hero-loader {
@@ -118,13 +131,21 @@ document.addEventListener("DOMContentLoaded", () => {
     vtt: "https://video-lyart-one.vercel.app/hero/hero-de-v1.vtt"
   };
 
+  // Kein natives Bedienelement: der Player wird ausschließlich über den
+  // mittigen Play-Button und einen Klick aufs Video gesteuert.
   const VIDEO_STYLE =
-    "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000;border:0";
+    "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000;border:0;cursor:pointer";
 
   document
     .querySelectorAll("[data-video-trigger], [dd-wistia-video-trigger]")
     .forEach((button) => {
       const legacy = !button.hasAttribute("data-video-trigger");
+
+      const wrapper = button.closest(
+        "[data-video-wrapper], [dd-wistia-video-wrapper]"
+      );
+
+      if (!wrapper) return;
 
       const sources = legacy
         ? HERO
@@ -149,33 +170,43 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      button.addEventListener("click", () => {
-        const wrapper = button.closest(
-          "[data-video-wrapper], [dd-wistia-video-wrapper]"
-        );
+      let video = null;
 
-        if (!wrapper || button.disabled) return;
-
+      const createVideo = () => {
         const wide = window.matchMedia("(min-width: 768px)").matches;
         const src = wide ? sources.src1080 : sources.src720;
 
-        if (!src) return;
+        if (!src) return null;
 
-        button.disabled = true;
-        button.classList.add("is-loading");
-
-        const video = document.createElement("video");
+        const element = document.createElement("video");
 
         // CORS mode: required for the cross-origin <track> (server sends ACAO *).
-        video.crossOrigin = "anonymous";
-        video.src = src;
-        video.poster = sources.poster || "";
-        video.controls = true;
-        video.playsInline = true;
-        video.preload = "auto";
-        video.disablePictureInPicture = true;
-        video.setAttribute("controlslist", "nodownload");
-        video.setAttribute("style", VIDEO_STYLE);
+        element.crossOrigin = "anonymous";
+        element.src = src;
+        element.poster = sources.poster || "";
+        element.controls = false;
+        element.preload = "auto";
+
+        // Inline auf dem iPhone: playsInline allein reicht älteren iOS-Safari
+        // nicht, die brauchen zusätzlich die beiden Attribute.
+        element.playsInline = true;
+        element.setAttribute("playsinline", "");
+        element.setAttribute("webkit-playsinline", "");
+
+        // Bild-in-Bild, AirPlay und Cast sperren — sonst blendet iOS die
+        // nativen Schaltflächen trotz controls=false ein.
+        element.disablePictureInPicture = true;
+        element.setAttribute("disablepictureinpicture", "");
+        element.disableRemotePlayback = true;
+        element.setAttribute("disableremoteplayback", "");
+        element.setAttribute("x-webkit-airplay", "deny");
+
+        element.setAttribute(
+          "controlslist",
+          "nodownload nofullscreen noremoteplayback"
+        );
+        element.setAttribute("style", VIDEO_STYLE);
+        element.setAttribute("aria-label", "Testen auf der Hauptseite");
 
         if (sources.vtt) {
           const track = document.createElement("track");
@@ -186,19 +217,75 @@ document.addEventListener("DOMContentLoaded", () => {
           track.default = true;
           track.src = sources.vtt;
 
-          video.appendChild(track);
+          element.appendChild(track);
         }
 
-        const reveal = () => {
+        element.addEventListener("playing", () => {
           wrapper.classList.add("is-loaded");
+          wrapper.classList.remove("is-paused");
           button.classList.remove("is-loading");
-        };
+          button.setAttribute("aria-label", "Video pausieren");
+        });
 
-        video.addEventListener("playing", reveal, { once: true });
+        element.addEventListener("pause", () => {
+          if (element.ended) return;
 
-        wrapper.appendChild(video);
+          wrapper.classList.add("is-paused");
+          button.setAttribute("aria-label", "Video abspielen");
+        });
 
-        video.play().catch(reveal);
+        // Am Ende zurück in den Ausgangszustand: Vorschaubild und Play-Button.
+        element.addEventListener("ended", () => {
+          wrapper.classList.remove("is-loaded");
+          wrapper.classList.remove("is-paused");
+          element.currentTime = 0;
+          button.setAttribute("aria-label", "Video abspielen");
+        });
+
+        element.addEventListener("error", () => {
+          wrapper.classList.remove("is-loaded");
+          wrapper.classList.remove("is-paused");
+          button.classList.remove("is-loading");
+        });
+
+        // Klick auf das laufende Video pausiert, erneuter Klick spielt weiter.
+        element.addEventListener("click", () => {
+          if (element.paused) {
+            element.play().catch(() => {});
+          } else {
+            element.pause();
+          }
+        });
+
+        // Doppelklick würde sonst den Vollbildmodus auslösen.
+        element.addEventListener("dblclick", (event) => {
+          event.preventDefault();
+        });
+
+        wrapper.appendChild(element);
+
+        return element;
+      };
+
+      button.addEventListener("click", () => {
+        if (button.classList.contains("is-loading")) return;
+
+        if (!video) {
+          video = createVideo();
+
+          if (!video) return;
+
+          button.classList.add("is-loading");
+          video.play().catch(() => button.classList.remove("is-loading"));
+
+          return;
+        }
+
+        if (video.paused) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
       });
     });
 });

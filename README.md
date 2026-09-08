@@ -29,12 +29,34 @@ Hier liegt der Webflow-Teil der Umstellung (Site `64889a266012bdd6373f2952`, Pag
 
 | Datei | Was |
 |---|---|
-| `hero-embed-full.html` | **Maßgeblich.** Kompletter Inhalt des Hero-Embeds (Element `adfa4dd4-1781-1c9b-e2db-8832ca189328`): Markup, CSS und das Click-to-play-Script in einem Embed. Genau so per API in Webflow geschrieben. |
+| `hero-embed-full.html` | **Maßgeblich.** Kompletter Inhalt des Hero-Embeds (Element `adfa4dd4-1781-1c9b-e2db-8832ca189328`): Markup, CSS und das Click-to-play-Script in einem Embed. Genau so per API in Webflow geschrieben. Verhalten siehe „Der Player ohne Bedienleiste“. |
 | `esc-embed.html` | Inhalt der ESC-Karte (Element `adfa4dd4-1781-1c9b-e2db-8832ca18955e`): stummer Loop als natives `<video>`. Per API geschrieben. |
 | `hero-embed.html`, `hero-css-patch.md` | Bausteine von `hero-embed-full.html`, nur noch als Referenz. |
 | `home-head.html`, `home-footer.html` | Bereinigter Page-Head- und Page-Footer-Code (ohne Wistia-`preconnect`, ohne Wistia-Click-Script, `[data-video-src]`-Script nur einmal). **Noch nicht eingespielt**, siehe unten. |
 | `backup/home-head-original.html`, `backup/home-footer-original.html` | Page-Head- und Page-Footer-Code, wie er vor der Umstellung live war. Byte-genau über die Webflow-API gelesen. |
 | `home-head-snippet.html`, `home-footer-snippet.html` | Erste Entwürfe, nur noch als Referenz. |
+
+## Der Player ohne Bedienleiste
+
+Der Kunde will das Verhalten des alten Wistia-Players mit `playbar:false`: Video inline im Hero,
+keine native Bedienleiste, kein Popup. Das `<video>` läuft deshalb mit `controls = false`; gesteuert
+wird ausschließlich über den mittigen Play-Button und einen Klick aufs Video.
+
+- **Start:** Klick auf den Button lädt das Video und spielt es **mit Ton** (kein `muted`) — erlaubt,
+  weil der Klick eine echte Nutzergeste ist.
+- **Pause:** Klick aufs laufende Video pausiert. Der Wrapper bekommt `is-paused`; darüber wird der
+  Play-Button wieder eingeblendet, während das Vorschaubild auf `opacity: 0` bleibt. Sichtbar ist
+  also das **stehende Videobild**, nicht das Poster. Klick auf den Button spielt weiter.
+- **Ende:** `is-loaded` fällt weg, `currentTime` geht auf 0 — Vorschaubild und Play-Button stehen
+  wieder wie am Anfang, der nächste Klick spielt von vorn.
+- **Untertitel** bleiben über `<track … default>` eingeblendet. Der Track ist Cross-Origin, deshalb
+  ist `crossOrigin = "anonymous"` Pflicht (sonst bleiben die Cues leer).
+
+`controls = false` allein reicht auf dem iPhone nicht: iOS blendet sonst weiterhin Vollbild, PiP,
+±10 s und AirPlay ein. Nötig sind zusätzlich `controlslist="nodownload nofullscreen noremoteplayback"`,
+`disableRemotePlayback` + `disableremoteplayback`, `x-webkit-airplay="deny"`, `disablepictureinpicture`
+sowie `playsinline` **und** `webkit-playsinline` als Attribute (ältere iOS-Safari lesen die Property
+nicht). Ein `dblclick`-Listener mit `preventDefault()` unterbindet den Vollbild-Doppelklick.
 
 Was die Webflow-API kann und was nicht (mit dem Webflow-MCP 2.0.1 verifiziert):
 

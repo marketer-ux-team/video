@@ -98,6 +98,14 @@ Was die Webflow-API kann und was nicht (mit dem Webflow-MCP 2.0.1 verifiziert):
   `home-head.html` und den Footer durch `home-footer.html` (beide vollständig).
 - Publish geht per REST: `POST /v2/sites/{site_id}/publish` mit `customDomains`.
 
+Seite `/website-erstellen-lassen` (Page `653a9ed8ced44f4759b93170`): dort war Wistia ein natives
+Webflow-Video-Element (Embedly). Per API wurde daneben ein HtmlEmbed angelegt (Element
+`d8a83bc9-2441-f79c-b067-0cc7c62972fb`, Inhalt `webflow/wel-embed-full.html`), das alte Video-Element
+entfernt. Wichtig: der Embed braucht die Webflow-Klasse `wistia-video_component` (`width:100%;
+aspect-ratio:16/9; border-radius:1.75rem`), weil der umgebende `.video-preview_wrapper` ein
+Flex-Container ist und ein Embed ohne Klasse dort 0×0 px groß bleibt. Der Klassenname ist nur noch
+historisch, die Klasse enthält kein Wistia mehr.
+
 ### Das Click-to-play-Script
 
 Es reagiert auf `[data-video-trigger]` (neues Embed) und zusätzlich auf `[dd-wistia-video-trigger]`

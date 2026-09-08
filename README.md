@@ -20,7 +20,13 @@ werden als Scroll-Animationen auf der Website genutzt; sie bleiben unberührt.
 | `hero/hero-poster-v1.webp` | 18,3 KB | Vorschaubild des Hero-Embeds (`<img>`) und `poster` des `<video>`. |
 | `hero/hero-de-v1.vtt` | 6,9 KB | Deutsche Untertitel des Hero-Videos, als `<track>` am `<video>`. 90 Cues. |
 | `hero/esc-loop-720-v1.mp4` | 1,8 MiB | ESC-Karte in der Referenzen-Section der Startseite. Stummer 10-Sekunden-Loop, startet beim Scrollen. |
+| `hero/wel-720-v1.mp4` | 12,9 MiB | Video auf `/website-erstellen-lassen`, ersetzt Wistia `zpebt984kw`. 1280×720, 2:54 min. Beide `data-video-src-*` zeigen darauf, siehe unten. |
+| `hero/wel-poster-v1.webp` | 35,9 KB | Vorschaubild dieses Embeds (`<img>`) und `poster` des `<video>`. 960×540. |
+| `hero/wel-de-v1.vtt` | 5,7 KB | Deutsche Untertitel dazu, als `<track>` am `<video>`. 73 Cues. |
 | `animation-*.webm` / `animation-*.mov` | | Ältere Scroll-Animationen, unverändert. |
+
+Trotz des Präfixes liegen die `wel-*`-Dateien bewusst in `hero/`: nur für diesen Pfad setzt
+`vercel.json` den Immutable-Header, und die Versionsregel weiter unten gilt für sie genauso.
 
 ## Der Ordner `webflow/`
 
@@ -30,6 +36,7 @@ Hier liegt der Webflow-Teil der Umstellung (Site `64889a266012bdd6373f2952`, Pag
 | Datei | Was |
 |---|---|
 | `hero-embed-full.html` | **Maßgeblich.** Kompletter Inhalt des Hero-Embeds (Element `adfa4dd4-1781-1c9b-e2db-8832ca189328`): Markup, CSS und das Click-to-play-Script in einem Embed. Genau so per API in Webflow geschrieben. Verhalten siehe „Der Player ohne Bedienleiste“. |
+| `wel-embed-full.html` | **Maßgeblich** für `/website-erstellen-lassen`. Inhaltlich dieselbe Fassung wie `hero-embed-full.html`, aber mit dem Präfix `wel_video-wrapper` / `wel-video…` / `wel-loader`, damit nichts mit den Webflow-Klassen dieser Seite kollidiert. Die Legacy-Zweige (`dd-wistia-*`, Konstanten im Script) sind hier raus. **Noch nicht in Webflow eingespielt.** |
 | `esc-embed.html` | Inhalt der ESC-Karte (Element `adfa4dd4-1781-1c9b-e2db-8832ca18955e`): stummer Loop als natives `<video>`. Per API geschrieben. |
 | `hero-embed.html`, `hero-css-patch.md` | Bausteine von `hero-embed-full.html`, nur noch als Referenz. |
 | `home-head.html`, `home-footer.html` | Bereinigter Page-Head- und Page-Footer-Code (ohne Wistia-`preconnect`, ohne Wistia-Click-Script, `[data-video-src]`-Script nur einmal). **Noch nicht eingespielt**, siehe unten. |
@@ -53,6 +60,17 @@ wird ausschließlich über den mittigen Play-Button und einen Klick aufs Video.
   ist `crossOrigin = "anonymous"` Pflicht (sonst bleiben die Cues leer). `video::cue` setzt sie auf
   `font-size: 150%`; Chrome und Safari leiten die Basisgröße aus der Videohöhe ab, die Angabe bleibt
   damit auf jedem Viewport proportional.
+
+**Untertitelposition:** dafür ist bewusst *nichts* eingestellt. Es lag der Verdacht nahe, dass die
+Cue-Box mit 150 % unten aus dem Video läuft und über WebVTT-Cue-Settings (`line:-3`) angehoben werden
+muss — `::cue` kennt keine Positionierung, das ginge nur über die VTT-Datei. In Chrome 152 nachgemessen
+stimmt der Verdacht nicht: bei zweizeiligen Cues bleiben 8 px, bei einzeiligen 4 px Abstand zum unteren
+Videorand, auf 1280 px wie auf 390 px. `line:-3` würde die Untertitel stattdessen um 50 px (Desktop,
+zweizeilig) bis 104 px (Desktop, einzeilig) nach oben schieben und die Unterkante zwischen ein- und
+zweizeiligen Cues springen lassen, weil `line` die **erste** Zeile verankert. Automatische Positionierung
+ist hier also die bessere. Falls doch einmal etwas anzuheben ist: Setting an jede Zeitzeile der VTT
+anhängen (`00:00:01.000 --> 00:00:03.500 line:-3`), eine neue Dateiversion anlegen — `/hero/` ist
+immutable gecacht.
 
 Das Vorschaubild darf ab dem Wiedergabestart **nie wieder sichtbar werden**. Dafür sorgt
 `.hero_video-wrapper.is-loaded .hero-video_thumbnail { opacity: 0 }`, und `.hero-video_thumbnail`
@@ -146,3 +164,25 @@ Die Untertitel stammen aus `https://fast.wistia.com/embed/captions/n58wkinar9.js
 unter `captions[].hash.lines[]` Cues mit `start`/`end` in Sekunden und `text` als Array von Zeilen;
 daraus entsteht die WebVTT-Datei. Wenn Wistia irgendwann abgeschaltet ist, lässt sich stattdessen ein
 SRT-Export mit `ffmpeg -i hero.srt hero-de-v1.vtt` umwandeln.
+
+### Das Video von `/website-erstellen-lassen`
+
+Quelle ist Wistia `zpebt984kw` („chris-webseite erstellen lassen", 2:54 min). Die Metadaten liegen
+unter `https://fast.wistia.com/embed/medias/zpebt984kw.json`, die beste Fassung in `assets[]` ist
+`original` mit **nur 1280×720** (H.264 Main, 25 fps, `.bin`-URL). Höher geht es nicht — deshalb
+**kein Upscaling** und nur eine Datei; im Embed zeigen `data-video-src-1080` und `-720` beide auf
+`wel-720-v1.mp4`.
+
+```bash
+# 720p, aus dem 720p-Original (kein Upscaling — es gibt keine groessere Quelle)
+ffmpeg -i src-original.mp4 -vf scale=1280:720 \
+  -c:v libx264 -profile:v high -pix_fmt yuv420p -preset slow -crf 26 \
+  -c:a aac -b:a 96k -movflags +faststart wel-720-v1.mp4
+
+# Poster aus dem still_image der Media-JSON (kommt als PNG, trotz .jpg-Endung)
+cwebp -q 80 -resize 960 540 still.jpg -o wel-poster-v1.webp
+```
+
+Untertitel wie beim Hero aus `https://fast.wistia.com/embed/captions/zpebt984kw.json`, 73 Cues.
+Ohne Cue-Settings (`line:` & Co.) — Chrome und Safari setzen die Untertitel von selbst korrekt
+unten ins Video, auch mit `::cue { font-size: 150% }`; siehe den Absatz zur Untertitelposition.

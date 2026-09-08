@@ -50,7 +50,17 @@ wird ausschließlich über den mittigen Play-Button und einen Klick aufs Video.
 - **Ende:** `is-loaded` fällt weg, `currentTime` geht auf 0 — Vorschaubild und Play-Button stehen
   wieder wie am Anfang, der nächste Klick spielt von vorn.
 - **Untertitel** bleiben über `<track … default>` eingeblendet. Der Track ist Cross-Origin, deshalb
-  ist `crossOrigin = "anonymous"` Pflicht (sonst bleiben die Cues leer).
+  ist `crossOrigin = "anonymous"` Pflicht (sonst bleiben die Cues leer). `video::cue` setzt sie auf
+  `font-size: 150%`; Chrome und Safari leiten die Basisgröße aus der Videohöhe ab, die Angabe bleibt
+  damit auf jedem Viewport proportional.
+
+Das Vorschaubild darf ab dem Wiedergabestart **nie wieder sichtbar werden**. Dafür sorgt
+`.hero_video-wrapper.is-loaded .hero-video_thumbnail { opacity: 0 }`, und `.hero-video_thumbnail`
+hat bewusst **keine** `transition`. Beides gehört zusammen: hing die Deckkraft nur an `.is-paused`
+und fadete über 0,35 s, blitzte beim Pausieren für einen Moment das Poster auf, während der Button
+einblendete (Kundenmeldung zu V2, in Chrome gemessen: `opacity` 1 → 0 über rund 350 ms). Erst am
+Videoende fällt `is-loaded` weg, dann kommt das Vorschaubild absichtlich zurück, während das Video
+ausblendet.
 
 `controls = false` allein reicht auf dem iPhone nicht: iOS blendet sonst weiterhin Vollbild, PiP,
 ±10 s und AirPlay ein. Nötig sind zusätzlich `controlslist="nodownload nofullscreen noremoteplayback"`,

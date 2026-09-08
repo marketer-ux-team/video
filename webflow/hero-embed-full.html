@@ -33,11 +33,12 @@
   transition: opacity 0.35s ease;
 }
 
+/* Kein transition hier: sonst fadet das Vorschaubild beim Pausieren sichtbar
+   aus (rund 0,35 s Flash), statt sofort weg zu sein. */
 .hero-video_thumbnail {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: opacity 0.35s ease;
 }
 
 .hero-video_play {
@@ -99,20 +100,30 @@
   opacity: 1;
 }
 
+/* Ab dem Wiedergabestart ist das Vorschaubild endgültig weg — auch während der
+   Pause, in der der Button samt Vorschaubild wieder eingeblendet wird. Erst am
+   Videoende fällt is-loaded weg und das Vorschaubild kommt zurück. */
+.hero_video-wrapper.is-loaded .hero-video_thumbnail {
+  opacity: 0;
+}
+
 .hero_video-wrapper.is-loaded .hero-video {
   opacity: 0;
   pointer-events: none;
 }
 
-/* Pausiert: Play-Button über dem stehenden Bild, Vorschaubild bleibt unsichtbar. */
+/* Pausiert: Play-Button über dem stehenden Bild, Vorschaubild bleibt unsichtbar
+   (siehe .is-loaded-Regel oben). */
 .hero_video-wrapper.is-loaded.is-paused .hero-video {
   opacity: 1;
   pointer-events: auto;
   background: rgba(0, 0, 0, 0.25);
 }
 
-.hero_video-wrapper.is-loaded.is-paused .hero-video_thumbnail {
-  opacity: 0;
+/* Untertitel 1,5-fach: Chrome und Safari leiten die Basisgröße der Cues aus der
+   Videohöhe ab, 150 % skaliert relativ dazu und bleibt darum responsiv. */
+.hero_video-wrapper video::cue {
+  font-size: 150%;
 }
 
 @keyframes hero-loader {

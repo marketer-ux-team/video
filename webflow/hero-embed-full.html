@@ -1,0 +1,205 @@
+<div class="hero_video-wrapper" data-video-wrapper>
+  <button class="hero-video" type="button" aria-label="Video abspielen"
+    data-video-trigger
+    data-video-src-1080="https://video-lyart-one.vercel.app/hero/hero-1080-v1.mp4"
+    data-video-src-720="https://video-lyart-one.vercel.app/hero/hero-720-v1.mp4"
+    data-video-poster="https://video-lyart-one.vercel.app/hero/hero-poster-v1.webp"
+    data-video-vtt="https://video-lyart-one.vercel.app/hero/hero-de-v1.vtt">
+    <img class="hero-video_thumbnail" src="https://video-lyart-one.vercel.app/hero/hero-poster-v1.webp" alt="Testen auf der Hauptseite" loading="eager" width="960" height="540">
+    <span class="hero-video_play" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5L19 12L8 19V5Z" fill="currentColor"/></svg></span>
+  </button>
+</div>
+
+<style>
+.hero_video-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 940 / 529;
+  overflow: hidden;
+  background: #000;
+}
+
+.hero-video {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+
+.hero-video_thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-video_play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  color: #000;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.hero-video:hover .hero-video_play {
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.hero-video.is-loading {
+  cursor: wait;
+}
+
+.hero-video.is-loading .hero-video_play svg {
+  opacity: 0;
+}
+
+.hero-video.is-loading .hero-video_play::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: hero-loader 0.7s linear infinite;
+}
+
+.hero_video-wrapper video {
+  object-fit: cover;
+  background: #000;
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.hero_video-wrapper.is-loaded video {
+  opacity: 1;
+}
+
+.hero_video-wrapper.is-loaded .hero-video {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes hero-loader {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const HERO = {
+    src1080: "https://video-lyart-one.vercel.app/hero/hero-1080-v1.mp4",
+    src720: "https://video-lyart-one.vercel.app/hero/hero-720-v1.mp4",
+    poster: "https://video-lyart-one.vercel.app/hero/hero-poster-v1.webp",
+    vtt: "https://video-lyart-one.vercel.app/hero/hero-de-v1.vtt"
+  };
+
+  const VIDEO_STYLE =
+    "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000;border:0";
+
+  document
+    .querySelectorAll("[data-video-trigger], [dd-wistia-video-trigger]")
+    .forEach((button) => {
+      const legacy = !button.hasAttribute("data-video-trigger");
+
+      const sources = legacy
+        ? HERO
+        : {
+            // NB: data-video-src-1080 maps to dataset["videoSrc-1080"], not
+            // dataset.videoSrc1080 (the dash is followed by a digit), so read
+            // these through getAttribute.
+            src1080: button.getAttribute("data-video-src-1080"),
+            src720: button.getAttribute("data-video-src-720"),
+            poster: button.getAttribute("data-video-poster") || "",
+            vtt: button.getAttribute("data-video-vtt") || ""
+          };
+
+      // Legacy embed (not yet swapped in the Designer): repoint the thumbnail
+      // at the self-hosted poster so no third-party image is requested.
+      if (legacy && sources.poster) {
+        const thumbnail = button.querySelector("img.hero-video_thumbnail");
+
+        if (thumbnail) {
+          thumbnail.removeAttribute("srcset");
+          thumbnail.src = sources.poster;
+        }
+      }
+
+      button.addEventListener("click", () => {
+        const wrapper = button.closest(
+          "[data-video-wrapper], [dd-wistia-video-wrapper]"
+        );
+
+        if (!wrapper || button.disabled) return;
+
+        const wide = window.matchMedia("(min-width: 768px)").matches;
+        const src = wide ? sources.src1080 : sources.src720;
+
+        if (!src) return;
+
+        button.disabled = true;
+        button.classList.add("is-loading");
+
+        const video = document.createElement("video");
+
+        // CORS mode: required for the cross-origin <track> (server sends ACAO *).
+        video.crossOrigin = "anonymous";
+        video.src = src;
+        video.poster = sources.poster || "";
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = "auto";
+        video.disablePictureInPicture = true;
+        video.setAttribute("controlslist", "nodownload");
+        video.setAttribute("style", VIDEO_STYLE);
+
+        if (sources.vtt) {
+          const track = document.createElement("track");
+
+          track.kind = "subtitles";
+          track.srclang = "de";
+          track.label = "Deutsch";
+          track.default = true;
+          track.src = sources.vtt;
+
+          video.appendChild(track);
+        }
+
+        const reveal = () => {
+          wrapper.classList.add("is-loaded");
+          button.classList.remove("is-loading");
+        };
+
+        video.addEventListener("playing", reveal, { once: true });
+
+        wrapper.appendChild(video);
+
+        video.play().catch(reveal);
+      });
+    });
+});
+</script>

@@ -180,6 +180,14 @@ document.addEventListener("DOMContentLoaded", () => {
       vtt: button.getAttribute("data-video-vtt") || ""
     };
 
+    // Kontextmenü über dem gesamten Player sperren. Der Handler am Video
+    // allein reicht nicht: pausiert liegt das Button-Overlay mit dem
+    // Vorschaubild darüber, ein Rechtsklick träfe dann den Button und der
+    // Browser böte "Bild sichern" an.
+    wrapper.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
     // Deterministische Untertitelgröße: aus der gerenderten Videohöhe eine
     // px-Zahl rechnen und als eigene Regel injizieren. Das ist in Chrome,
     // Safari (macOS und iOS), Firefox und Edge identisch — anders als

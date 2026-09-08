@@ -64,10 +64,10 @@ wird ausschließlich über den mittigen Play-Button und einen Klick aufs Video.
   zwischen Wiedergabe und Pause. Der Button ist nativ mit Leertaste/Enter auslösbar; weil
   `preventDefault` (gegen das Scrollen) diesen synthetischen Klick unterdrückt, schaltet der
   `keydown`-Handler selbst um — sonst käme es zum Doppel-Toggle.
-- **Kein Kontextmenü auf dem Video** (`contextmenu` → `preventDefault`): Safari und Firefox bieten
-  dort sonst „Bild-in-Bild", „Video sichern" und „Vollbild" an. Im Pausenzustand liegt das
-  Button-Overlay über dem Video, dort greift der Handler nicht — das native Menü gehört dann zum
-  Button, nicht zum Video.
+- **Kein Kontextmenü über dem Player** (`contextmenu` → `preventDefault`): Safari und Firefox bieten
+  auf dem Video sonst „Bild-in-Bild", „Video sichern" und „Vollbild" an. Der Handler hängt am Video
+  **und** am Wrapper — pausiert liegt das Button-Overlay mit dem Vorschaubild über dem Video, ohne
+  den Wrapper-Handler träfe der Rechtsklick den Button und der Browser böte „Bild sichern" an.
 
 **Untertitelgröße — keine Prozentangabe in `::cue`.** Bis V3 stand `video::cue { font-size: 150% }`
 statisch im Embed. In Chrome ergibt das das Erwartete (1,5-fache der Standardgröße), auf iOS Safari
@@ -163,10 +163,11 @@ Untertitel-Datei vom fremden Origin nicht (die `<track>`-Cues bleiben leer); Ver
 Nichts im Script ist Chrome-only: `matchMedia`, `closest`, `textTracks`, `ResizeObserver`
 (mit `window.resize` als Rückfall) und Pfeilfunktionen sind überall Baseline — kein `?.`, kein
 `??`, keine privaten Felder. Verifiziert in echten Engines über Playwright (Chromium, Firefox,
-WebKit, je Desktop 1280 × 800 und Mobile 390 × 844, beide Embeds): 264 Checks grün, darunter
+WebKit, je Desktop 1280 × 800 und Mobile 390 × 844, beide Embeds): 276 Checks grün, darunter
 Wiedergabe mit Ton, geladene Cues, injizierte px-Regel, Klick- und Tastatur-Bedienung sowie der
-unterdrückte Rechtsklick. In Firefox erscheint beim Hover über dem laufenden Video **kein**
-Bild-in-Bild-Umschalter — `disablePictureInPicture` wird respektiert.
+unterdrückte Rechtsklick — auf dem laufenden Video wie auf dem Overlay im Pausenzustand. In Firefox
+erscheint beim Hover über dem laufenden Video **kein** Bild-in-Bild-Umschalter,
+`disablePictureInPicture` wird respektiert.
 
 ## Versionierung: niemals eine Datei überschreiben
 

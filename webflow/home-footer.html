@@ -58,6 +58,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const video = document.createElement("video");
 
+        // CORS mode: required for the cross-origin <track> (server sends ACAO *).
+        video.crossOrigin = "anonymous";
         video.src = src;
         video.poster = sources.poster || "";
         video.controls = true;

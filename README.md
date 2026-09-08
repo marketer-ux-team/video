@@ -24,31 +24,34 @@ werden als Scroll-Animationen auf der Website genutzt; sie bleiben unberührt.
 
 ## Der Ordner `webflow/`
 
-Hier liegt der Webflow-Teil der Umstellung: die beiden Embed-Inhalte und der komplette Custom Code
-der Startseite (Site `64889a266012bdd6373f2952`, Page `69e355534b2b266220042310`).
+Hier liegt der Webflow-Teil der Umstellung (Site `64889a266012bdd6373f2952`, Page
+`69e355534b2b266220042310`). Stand 2026-09-08 ist die Startseite umgestellt und veröffentlicht.
 
 | Datei | Was |
 |---|---|
-| `home-head.html` | **Vollständiger** neuer Page-Head-Code der Startseite. Identisch zum Original bis auf die vier Wistia-`preconnect`/`dns-prefetch`-Zeilen, die durch einen `preconnect` auf `video-lyart-one.vercel.app` ersetzt sind. |
-| `home-footer.html` | **Vollständiger** neuer Page-Footer-Code. Der Wistia-iframe-Block ist durch das Click-to-play-Script für natives `<video>` ersetzt; das doppelt vorhandene `[data-video-src]`-Script steht nur noch einmal drin. Alle übrigen Blöcke (ouibounce, Testimonial-Höhen, GSAP-Branchen, Partnerschaftsdauer, `[play-by-scroll]`) sind unverändert. |
-| `backup/home-head-original.html` | Page-Head-Code, wie er vor der Umstellung live war. Byte-genau über die Webflow-API gelesen. |
-| `backup/home-footer-original.html` | Page-Footer-Code, wie er vor der Umstellung live war. Byte-genau über die Webflow-API gelesen. |
-| `hero-embed.html` | Neuer Inhalt des Hero-Embeds (Element `adfa4dd4-1781-1c9b-e2db-8832ca189328`). |
-| `esc-embed.html` | Neuer Inhalt der ESC-Karte (Element `adfa4dd4-1781-1c9b-e2db-8832ca18955e`). |
-| `hero-css-patch.md` | Die wenigen Zeilen, die im bestehenden Hero-Style-Embed anzupassen sind. |
-| `home-head-snippet.html`, `home-footer-snippet.html` | Erste Entwürfe, nur noch als Referenz. Maßgeblich sind die vollständigen `home-head.html` / `home-footer.html`. |
+| `hero-embed-full.html` | **Maßgeblich.** Kompletter Inhalt des Hero-Embeds (Element `adfa4dd4-1781-1c9b-e2db-8832ca189328`): Markup, CSS und das Click-to-play-Script in einem Embed. Genau so per API in Webflow geschrieben. |
+| `esc-embed.html` | Inhalt der ESC-Karte (Element `adfa4dd4-1781-1c9b-e2db-8832ca18955e`): stummer Loop als natives `<video>`. Per API geschrieben. |
+| `hero-embed.html`, `hero-css-patch.md` | Bausteine von `hero-embed-full.html`, nur noch als Referenz. |
+| `home-head.html`, `home-footer.html` | Bereinigter Page-Head- und Page-Footer-Code (ohne Wistia-`preconnect`, ohne Wistia-Click-Script, `[data-video-src]`-Script nur einmal). **Noch nicht eingespielt**, siehe unten. |
+| `backup/home-head-original.html`, `backup/home-footer-original.html` | Page-Head- und Page-Footer-Code, wie er vor der Umstellung live war. Byte-genau über die Webflow-API gelesen. |
+| `home-head-snippet.html`, `home-footer-snippet.html` | Erste Entwürfe, nur noch als Referenz. |
 
-Die Embed-Inhalte werden im Designer per Copy-Paste eingesetzt, weil sich HtmlEmbed-Inhalte über die
-Data-API nicht schreiben lassen. Head und Footer sollten über die API laufen
-(`data_scripts_tool > set_page_freeform_code`) — **das schlägt derzeit mit `HTTP 406` fehl**, während
-Lesen (`get_page_freeform_code`) funktioniert. Bis das geklärt ist, lassen sich `home-head.html` und
-`home-footer.html` genauso per Copy-Paste in die Page-Settings der Startseite einsetzen; beide
-Dateien sind vollständig und ersetzen den jeweiligen Block als Ganzes.
+Was die Webflow-API kann und was nicht (mit dem Webflow-MCP 2.0.1 verifiziert):
+
+- HtmlEmbed-Inhalte lassen sich lesen und schreiben (`data_element_settings_tool`, Setting `code`),
+  auch mit `<script>` darin. Deshalb sitzt das Click-to-play-Script direkt im Hero-Embed.
+- Freeform-Custom-Code (Page-Head/-Footer) lässt sich lesen, beim Schreiben antwortet die API mit
+  `HTTP 406`, sobald der Inhalt `<script>` oder `<link>` enthält (`<style>` und Kommentare gehen).
+  Head und Footer der Startseite sind darum unverändert geblieben. Übrig sind dort vier harmlose
+  Wistia-`preconnect`/`dns-prefetch`-Zeilen und das alte Wistia-Click-Script, das nichts mehr findet.
+  Wer das aufräumen will, ersetzt in den Page-Settings der Startseite den Head durch
+  `home-head.html` und den Footer durch `home-footer.html` (beide vollständig).
+- Publish geht per REST: `POST /v2/sites/{site_id}/publish` mit `customDomains`.
 
 ### Das Click-to-play-Script
 
 Es reagiert auf `[data-video-trigger]` (neues Embed) und zusätzlich auf `[dd-wistia-video-trigger]`
-(altes Embed, solange es im Designer noch nicht getauscht ist). Im Legacy-Fall kommen die URLs aus
+(altes Embed, falls es je zurückgesetzt wird). Im Legacy-Fall kommen die URLs aus
 Konstanten im Script, und das Vorschaubild `img.hero-video_thumbnail` wird beim Laden auf das
 selbst gehostete WebP umgeschrieben — so wird auch ohne Embed-Tausch kein Bild mehr von Wistia
 geladen. Das erzeugte `<video>` bekommt Inline-Styles (`position:absolute; inset:0; …
@@ -59,6 +62,10 @@ Eine Falle beim Lesen der Quellen: `data-video-src-1080` landet **nicht** unter
 `dataset.videoSrc1080`. Die Umwandlung in camelCase greift nur, wenn auf den Bindestrich ein
 Kleinbuchstabe folgt — bei einer Ziffer bleibt der Bindestrich stehen, der Schlüssel heißt also
 `dataset["videoSrc-1080"]`. Das Script liest diese Attribute deshalb mit `getAttribute()`.
+
+Das `<video>` bekommt `crossOrigin = "anonymous"`. Ohne CORS-Modus lädt der Browser die
+Untertitel-Datei vom fremden Origin nicht (die `<track>`-Cues bleiben leer); Vercel sendet
+`access-control-allow-origin: *`, mehr ist nicht nötig. Live in Chrome geprüft: 90 Cues.
 
 ## Versionierung: niemals eine Datei überschreiben
 

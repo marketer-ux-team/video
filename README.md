@@ -23,7 +23,14 @@ werden als Scroll-Animationen auf der Website genutzt; sie bleiben unberührt.
 | `hero/wel-720-v1.mp4` | 12,9 MiB | Video auf `/website-erstellen-lassen`, ersetzt Wistia `zpebt984kw`. 1280×720, 2:54 min. Beide `data-video-src-*` zeigen darauf, siehe unten. |
 | `hero/wel-poster-v1.webp` | 35,9 KB | Vorschaubild dieses Embeds (`<img>`) und `poster` des `<video>`. 960×540. |
 | `hero/wel-de-v1.vtt` | 5,7 KB | Deutsche Untertitel dazu, als `<track>` am `<video>`. 73 Cues. |
+| `hero/rohlmann-werkstatt-1080-v1.mp4` | 40,9 MiB | Hero-Video der Landingpage `handwerkerevent.rohlmann-steuer.de` (Kunde Rohlmann), ab Viewport 768 px. 1920×1080, 2:21 min. |
+| `hero/rohlmann-werkstatt-720-v1.mp4` | 16,7 MiB | Dasselbe Video unter 768 px Viewport-Breite. 1280×720. |
+| `hero/rohlmann-werkstatt-poster-v1.webp` | 30,8 KB | Vorschaubild dieses Embeds (`<img>`) und `poster` des `<video>`. 960×540. |
 | `animation-*.webm` / `animation-*.mov` | | Ältere Scroll-Animationen, unverändert. |
+
+Die `rohlmann-werkstatt-*`-Dateien gehören nicht zu marketer-ux.com, sondern zur Event-Landingpage
+eines Kunden; sie liegen hier, weil dieses Repo das Video-Hosting für alle Projekte stellt. Untertitel
+gibt es dafür noch nicht, das `<video>` bindet deshalb keinen `<track>` ein.
 
 Trotz des Präfixes liegen die `wel-*`-Dateien bewusst in `hero/`: nur für diesen Pfad setzt
 `vercel.json` den Immutable-Header, und die Versionsregel weiter unten gilt für sie genauso.

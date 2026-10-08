@@ -23,10 +23,11 @@ werden als Scroll-Animationen auf der Website genutzt; sie bleiben unberührt.
 | `hero/wel-720-v1.mp4` | 12,9 MiB | Video auf `/website-erstellen-lassen`, ersetzt Wistia `zpebt984kw`. 1280×720, 2:54 min. Beide `data-video-src-*` zeigen darauf, siehe unten. |
 | `hero/wel-poster-v1.webp` | 35,9 KB | Vorschaubild dieses Embeds (`<img>`) und `poster` des `<video>`. 960×540. |
 | `hero/wel-de-v1.vtt` | 5,7 KB | Deutsche Untertitel dazu, als `<track>` am `<video>`. 73 Cues. |
-| `hero/rohlmann-werkstatt-1080-v1.mp4` | 40,9 MiB | Hero-Video der Landingpage `handwerkerevent.rohlmann-steuer.de` (Kunde Rohlmann), ab Viewport 768 px. 1920×1080, 2:21 min. |
-| `hero/rohlmann-werkstatt-720-v1.mp4` | 16,7 MiB | Dasselbe Video unter 768 px Viewport-Breite. 1280×720. |
-| `hero/rohlmann-werkstatt-poster-v1.webp` | 30,8 KB | Vorschaubild dieses Embeds (`<img>`) und `poster` des `<video>`. 960×540. |
-| `hero/rohlmann-werkstatt-de-v1.vtt` | 3,6 KB | Deutsche Untertitel dazu, als `<track>` am `<video>`. 50 Cues. |
+| `hero/rohlmann-werkstatt-1080-v2.mp4` | 30,9 MiB | Hero-Video der Landingpage `handwerkerevent.rohlmann-steuer.de` (Kunde Rohlmann), ab Viewport 768 px. 1920×1080, 2:21 min. |
+| `hero/rohlmann-werkstatt-720-v2.mp4` | 14,2 MiB | Dasselbe Video unter 768 px Viewport-Breite. 1280×720. |
+| `hero/rohlmann-werkstatt-poster-v2.webp` | 28,3 KB | Vorschaubild dieses Embeds (`<img>`) und `poster` des `<video>`. 960×540. |
+| `hero/rohlmann-werkstatt-de-v1.vtt` | 3,6 KB | Deutsche Untertitel dazu, als `<track>` am `<video>`. 50 Cues. Gilt für v1 wie v2 — der Schnitt ist derselbe. |
+| `hero/rohlmann-werkstatt-*-v1.*` | | Vorgängerfassung, seit 2026-10-08 nicht mehr eingebunden. Liegt wegen des Immutable-Headers noch hier und kann gelöscht werden, sobald die Landingpage veröffentlicht ist. |
 | `animation-*.webm` / `animation-*.mov` | | Ältere Scroll-Animationen, unverändert. |
 
 Die `rohlmann-werkstatt-*`-Dateien gehören nicht zu marketer-ux.com, sondern zur Event-Landingpage
@@ -246,3 +247,27 @@ Untertitel wie beim Hero aus `https://fast.wistia.com/embed/captions/zpebt984kw.
 Ohne Cue-Settings (`line:` & Co.) — Chrome und Safari setzen die Untertitel von selbst korrekt
 unten ins Video; siehe den Absatz zur Untertitelposition. Die Größe kommt wie beim Hero aus dem
 Script (`CUE_FACTOR`, Selektor `.wel_video-wrapper video::cue`), nicht aus einer statischen Regel.
+
+### Das Video der Rohlmann-Landingpage
+
+Quelle ist der 4K-Master des Kunden (3840×2160, H.264, 30 fps, 141 s). Rezept wie oben, nur die
+Datenspur des Masters bleibt dabei liegen — der Master trägt einen defekten QT-Kapitel-Track,
+den ffmpeg mit `Referenced QT chapter track not found` quittiert. Die Meldung ist harmlos, v1
+hatte sie genauso.
+
+```bash
+ffmpeg -i master-4k.mp4 -map 0:v:0 -map 0:a:0 -vf scale=1920:1080 \
+  -c:v libx264 -profile:v high -pix_fmt yuv420p -preset slow -crf 25 \
+  -c:a aac -b:a 96k -movflags +faststart rohlmann-werkstatt-1080-v2.mp4
+
+ffmpeg -i master-4k.mp4 -map 0:v:0 -map 0:a:0 -vf scale=1280:720 \
+  -c:v libx264 -profile:v high -pix_fmt yuv420p -preset slow -crf 26 \
+  -c:a aac -b:a 96k -movflags +faststart rohlmann-werkstatt-720-v2.mp4
+
+# Poster: Frame bei 0:08, weil dort der „8 Stuehle"-Insert steht
+ffmpeg -ss 8 -i master-4k.mp4 -frames:v 1 still.png
+cwebp -q 80 -resize 960 540 still.png -o rohlmann-werkstatt-poster-v2.webp
+```
+
+v2 ist derselbe Schnitt wie v1, nur frisch aus dem Master gezogen: Frames bei 0:08 und 2:19 sind
+bildgleich, die Länge weicht um 0,36 s am Ende ab. Die Untertitel aus v1 passen deshalb weiter.

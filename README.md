@@ -23,6 +23,7 @@ werden als Scroll-Animationen auf der Website genutzt; sie bleiben unberührt.
 | `hero/wel-720-v1.mp4` | 12,9 MiB | Video auf `/website-erstellen-lassen`, ersetzt Wistia `zpebt984kw`. 1280×720, 2:54 min. Beide `data-video-src-*` zeigen darauf, siehe unten. |
 | `hero/wel-poster-v1.webp` | 35,9 KB | Vorschaubild dieses Embeds (`<img>`) und `poster` des `<video>`. 960×540. |
 | `hero/wel-de-v1.vtt` | 5,7 KB | Deutsche Untertitel dazu, als `<track>` am `<video>`. 73 Cues. |
+| `hero/<slug>-{1080,720}-v1.mp4`, `-poster-v1.webp`, `-de-v1.vtt` | | Videos von sechs Leistungsseiten, ersetzen dort Wistia (Stand 2026-10-13). Zuordnung siehe „Die Leistungsseiten". |
 | `hero/rohlmann-werkstatt-1080-v2.mp4` | 30,9 MiB | Hero-Video der Landingpage `handwerkerevent.rohlmann-steuer.de` (Kunde Rohlmann), ab Viewport 768 px. 1920×1080, 2:21 min. |
 | `hero/rohlmann-werkstatt-720-v2.mp4` | 14,2 MiB | Dasselbe Video unter 768 px Viewport-Breite. 1280×720. |
 | `hero/rohlmann-werkstatt-poster-v2.webp` | 28,3 KB | Vorschaubild dieses Embeds (`<img>`) und `poster` des `<video>`. 960×540. |
@@ -45,6 +46,7 @@ Hier liegt der Webflow-Teil der Umstellung (Site `64889a266012bdd6373f2952`, Pag
 |---|---|
 | `hero-embed-full.html` | **Maßgeblich.** Kompletter Inhalt des Hero-Embeds (Element `adfa4dd4-1781-1c9b-e2db-8832ca189328`): Markup, CSS und das Click-to-play-Script in einem Embed. Genau so per API in Webflow geschrieben. Verhalten siehe „Der Player ohne Bedienleiste“. |
 | `wel-embed-full.html` | **Maßgeblich** für `/website-erstellen-lassen`. Inhaltlich dieselbe Fassung wie `hero-embed-full.html`, aber mit dem Präfix `wel_video-wrapper` / `wel-video…` / `wel-loader`, damit nichts mit den Webflow-Klassen dieser Seite kollidiert. Die Legacy-Zweige (`dd-wistia-*`, Konstanten im Script) sind hier raus. **Noch nicht in Webflow eingespielt.** |
+| `<slug>-embed.html` | **Maßgeblich** für die sechs Leistungsseiten (siehe unten). Erzeugt aus `wel-embed-full.html`, Präfix `mux_video-wrapper` / `mux-video…` / `mux-loader`, Titel aus `data-video-title`, Schutz gegen Doppel-Init (`data-video-ready`). |
 | `esc-embed.html` | Inhalt der ESC-Karte (Element `adfa4dd4-1781-1c9b-e2db-8832ca18955e`): stummer Loop als natives `<video>`. Per API geschrieben. |
 | `hero-embed.html`, `hero-css-patch.md` | Bausteine von `hero-embed-full.html`, nur noch als Referenz. |
 | `home-head.html`, `home-footer.html` | Bereinigter Page-Head- und Page-Footer-Code (ohne Wistia-`preconnect`, ohne Wistia-Click-Script, `[data-video-src]`-Script nur einmal). **Noch nicht eingespielt**, siehe unten. |
@@ -271,3 +273,27 @@ cwebp -q 80 -resize 960 540 still.png -o rohlmann-werkstatt-poster-v2.webp
 
 v2 ist derselbe Schnitt wie v1, nur frisch aus dem Master gezogen: Frames bei 0:08 und 2:19 sind
 bildgleich, die Länge weicht um 0,36 s am Ende ab. Die Untertitel aus v1 passen deshalb weiter.
+
+## Die Leistungsseiten (Stand 2026-10-13)
+
+Auf sieben Seiten war Wistia ein natives Webflow-Video-Element (Embedly, Klasse
+`wistia-video_component`). Es wurde wie auf `/website-erstellen-lassen` durch ein HtmlEmbed mit
+derselben Klasse an derselben Stelle ersetzt, das alte Element entfernt, Site veröffentlicht.
+
+| Seite | Page-ID | Wistia | Slug / Embed-Datei | Quelle |
+|---|---|---|---|---|
+| `/webflow-agentur` | `653a9ed8ced44f4759b93157` | `8xt6hsren6` | `webflow-agentur` | 4K → 1080 + 720 |
+| `/landing-page-erstellen-lassen` | `653a9ed8ced44f4759b9305b` | `13buyyu3jl` | `webseite-vs-landingpage` | nur 720p |
+| `/geo-llmo-agentur` | `68b80ca33f0b9adbf3e86062` | `13buyyu3jl` | `webseite-vs-landingpage` | nur 720p |
+| `/weglot-agentur` | `653a9ed8ced44f4759b93172` | `gjoevbgpyl` | `weglot` | 4K → 1080 + 720 |
+| `/google-ads-agentur` | `653a9ed8ced44f4759b9301b` | `fjoh0zwfjm` | `google-ads` | nur 720p |
+| `/leadgenerierung` | `6683ad2e54418aca7d0f4119` | `fljo7taolz` | `leadgen` | nur 720p |
+| `/seo-duesseldorf` | `653a9ed8ced44f4759b930e8` | `88svaf226k` | `seo-duesseldorf` | 4K → 1080 + 720 |
+
+Encoding wie beim Hero (`-preset slow -crf 26`, AAC 96k, `+faststart`); bei 720p-Quellen nur eine
+Datei, beide `data-video-src-*` zeigen darauf. Poster = Wistia-Thumbnail (aus dem Embedly-`image=`),
+`cwebp -q 80 -resize 960 540`. Untertitel aus `fast.wistia.com/embed/captions/<id>.json`.
+
+Sonderfall `/leadgenerierung`: das alte Video saß per `w-node`-Regel in Spalte 2 des Header-Grids.
+Die Regel gehört zur Element-ID und fällt mit dem alten Element weg; `leadgen-embed.html` setzt die
+Platzierung deshalb selbst (`.header_component > .w-embed:has(> .mux_video-wrapper)`).

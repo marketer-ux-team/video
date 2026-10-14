@@ -10,6 +10,13 @@
    loop, ohne Controls). Füllt den Container: hat das Embed eine feste Höhe
    (absolut positioniert oder mit aspect-ratio), gilt height:100 %; sonst
    greift das aspect-ratio aus dem style-Attribut. */
+/* Altlast aus der Wistia-Zeit: Seiten-CSS wie .vdeo-port{padding-top:74% !important}
+   gab dem Container die Höhe. Hier bestimmt aspect-ratio die Höhe, das Padding
+   würde das Video sonst nach unten schieben. */
+.w-embed:has(> .mux_loop) {
+  padding-top: 0 !important;
+}
+
 .mux_loop {
   position: relative;
   width: 100%;

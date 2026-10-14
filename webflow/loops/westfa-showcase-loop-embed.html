@@ -1,0 +1,84 @@
+<div class="mux_loop" style="aspect-ratio:2544/1200">
+  <video muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"
+    disablepictureinpicture disableremoteplayback
+    poster="https://video-lyart-one.vercel.app/hero/westfa-showcase-loop-poster-v1.webp"
+    data-loop-src="https://video-lyart-one.vercel.app/hero/westfa-showcase-loop-v1.mp4"></video>
+</div>
+
+<style>
+/* Stummer Dauer-Loop ohne Bedienung (Ersatz für Wistia/Vimeo mit autoPlay,
+   loop, ohne Controls). Füllt den Container: hat das Embed eine feste Höhe
+   (absolut positioniert oder mit aspect-ratio), gilt height:100 %; sonst
+   greift das aspect-ratio aus dem style-Attribut. */
+.mux_loop {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.mux_loop video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  /* Klicks gehen durch: in den Portfolio-Karten liegt das Video in einem Link. */
+  pointer-events: none;
+}
+</style>
+
+<script>
+(() => {
+  // Lädt jedes Loop-Video erst, wenn es in die Nähe des Viewports kommt, und
+  // pausiert es außerhalb. Stehen mehrere Embeds auf der Seite, verdrahtet
+  // jedes Script nur die Videos, die noch kein data-loop-ready haben.
+  const start = () => {
+    const videos = [...document.querySelectorAll(".mux_loop video[data-loop-src]")]
+      .filter((video) => !video.hasAttribute("data-loop-ready"));
+
+    videos.forEach((video) => {
+      video.setAttribute("data-loop-ready", "");
+      // Safari startet stumme Videos nur, wenn muted auch als Property gesetzt ist.
+      video.muted = true;
+      video.defaultMuted = true;
+    });
+
+    const play = (video) => {
+      if (!video.src) {
+        video.src = video.getAttribute("data-loop-src");
+        video.preload = "auto";
+      }
+
+      video.play().catch(() => {});
+    };
+
+    if (!("IntersectionObserver" in window)) {
+      videos.forEach(play);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            play(entry.target);
+          } else if (!entry.target.paused) {
+            entry.target.pause();
+          }
+        });
+      },
+      { rootMargin: "200px 0px" }
+    );
+
+    videos.forEach((video) => observer.observe(video));
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
+})();
+</script>

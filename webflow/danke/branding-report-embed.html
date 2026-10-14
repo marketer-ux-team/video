@@ -1,0 +1,381 @@
+<div class="mux_video-wrapper" data-video-wrapper>
+  <button class="mux-video" type="button" aria-label="Video abspielen"
+    data-video-trigger
+    data-video-title="Branding Report"
+    data-video-src-1080="https://video-lyart-one.vercel.app/hero/branding-report-720-v1.mp4"
+    data-video-src-720="https://video-lyart-one.vercel.app/hero/branding-report-720-v1.mp4"
+    data-video-poster="https://video-lyart-one.vercel.app/hero/branding-report-poster-v1.webp">
+    <img class="mux-video_thumbnail" src="https://video-lyart-one.vercel.app/hero/branding-report-poster-v1.webp" alt="Branding Report" loading="eager" width="960" height="540">
+    <span class="mux-video_play" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5L19 12L8 19V5Z" fill="currentColor"/></svg></span>
+  </button>
+</div>
+
+<style>
+.mux_video-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+}
+
+.mux-video {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+
+/* Kein transition hier: sonst fadet das Vorschaubild beim Pausieren sichtbar
+   aus (rund 0,35 s Flash), statt sofort weg zu sein. */
+.mux-video_thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mux-video_play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  color: #000;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.mux-video:hover .mux-video_play {
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.mux-video.is-loading {
+  cursor: wait;
+}
+
+.mux-video.is-loading .mux-video_play svg {
+  opacity: 0;
+}
+
+.mux-video.is-loading .mux-video_play::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: mux-loader 0.7s linear infinite;
+}
+
+.mux_video-wrapper video {
+  object-fit: cover;
+  background: #000;
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.35s ease;
+}
+
+.mux_video-wrapper.is-loaded video {
+  opacity: 1;
+}
+
+/* Ab dem Wiedergabestart ist das Vorschaubild endgültig weg — auch während der
+   Pause, in der der Button samt Vorschaubild wieder eingeblendet wird. Erst am
+   Videoende fällt is-loaded weg und das Vorschaubild kommt zurück. */
+.mux_video-wrapper.is-loaded .mux-video_thumbnail {
+  opacity: 0;
+}
+
+.mux_video-wrapper.is-loaded .mux-video {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Pausiert: Play-Button über dem stehenden Bild, Vorschaubild bleibt unsichtbar
+   (siehe .is-loaded-Regel oben). */
+.mux_video-wrapper.is-loaded.is-paused .mux-video {
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Die Untertitelgröße steht bewusst NICHT hier: Prozent- und em-Angaben in
+   ::cue beziehen sich in WebKit auf eine andere Basis als in Chrome — auf dem
+   iPhone wurde aus "150 %" ein Vielfaches, das vier Zeilen ins Video schrieb.
+   Das Script unten leitet die Größe deshalb als feste px-Zahl aus der
+   gerenderten Videohöhe ab und injiziert sie pro Wrapper. */
+
+/* Ohne native Bedienleiste ist der Fokusring die einzige Rückmeldung für die
+   Tastatur-Bedienung. */
+.mux_video-wrapper video:focus-visible {
+  outline: 3px solid #2f6fd6;
+  outline-offset: -3px;
+}
+
+@keyframes mux-loader {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Kein natives Bedienelement: der Player wird ausschließlich über den
+  // mittigen Play-Button und einen Klick aufs Video gesteuert.
+  const VIDEO_STYLE =
+    "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000;border:0;cursor:pointer";
+
+  // Untertitelgröße als Anteil der gerenderten Videohöhe. Chrome und Safari
+  // setzen die Cues von Haus aus auf 5 % der Videohöhe (in Chrome 152
+  // nachgemessen: 940×529 → 26,5 px), 0,055 liegt also rund 1,1-fach darüber —
+  // spürbar größer als vorher, weit weg von den 1,5-fach, die auf dem iPhone
+  // aus dem Ruder liefen.
+  const CUE_FACTOR = 0.055;
+  const CUE_MIN_PX = 12;
+  const CUE_SELECTOR = ".mux_video-wrapper video::cue";
+
+  // Space, Enter und "k" (Konvention aus den großen Playern) schalten zwischen
+  // Wiedergabe und Pause um.
+  const isToggleKey = (event) =>
+    event.key === " " ||
+    event.key === "Spacebar" ||
+    event.key === "Enter" ||
+    event.key === "k" ||
+    event.key === "K";
+
+  document.querySelectorAll("[data-video-trigger]").forEach((button) => {
+    const wrapper = button.closest("[data-video-wrapper]");
+
+    // Steht mehr als ein Embed mit diesem Script auf der Seite, laufen alle
+    // Scripts über alle Buttons — jeder Button wird nur einmal verdrahtet.
+    if (!wrapper || button.hasAttribute("data-video-ready")) return;
+
+    button.setAttribute("data-video-ready", "");
+
+    // NB: data-video-src-1080 maps to dataset["videoSrc-1080"], not
+    // dataset.videoSrc1080 (the dash is followed by a digit), so read these
+    // through getAttribute.
+    const sources = {
+      src1080: button.getAttribute("data-video-src-1080"),
+      src720: button.getAttribute("data-video-src-720"),
+      poster: button.getAttribute("data-video-poster") || "",
+      vtt: button.getAttribute("data-video-vtt") || "",
+      title: button.getAttribute("data-video-title") || "Video"
+    };
+
+    // Kontextmenü über dem gesamten Player sperren. Der Handler am Video
+    // allein reicht nicht: pausiert liegt das Button-Overlay mit dem
+    // Vorschaubild darüber, ein Rechtsklick träfe dann den Button und der
+    // Browser böte "Bild sichern" an.
+    wrapper.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    // Deterministische Untertitelgröße: aus der gerenderten Videohöhe eine
+    // px-Zahl rechnen und als eigene Regel injizieren. Das ist in Chrome,
+    // Safari (macOS und iOS), Firefox und Edge identisch — anders als
+    // Prozent- oder em-Angaben in ::cue.
+    const cueStyle = document.createElement("style");
+
+    wrapper.appendChild(cueStyle);
+
+    const applyCueSize = () => {
+      const h = wrapper.getBoundingClientRect().height;
+
+      if (!h) return;
+
+      const px = Math.max(CUE_MIN_PX, Math.round(h * CUE_FACTOR));
+
+      cueStyle.textContent = CUE_SELECTOR + " { font-size: " + px + "px; }";
+    };
+
+    applyCueSize();
+
+    // Der Wrapper skaliert mit der Spaltenbreite: bei jeder Größenänderung
+    // neu rechnen (ResizeObserver ist Baseline, window.resize als Rückfall).
+    if (typeof ResizeObserver === "function") {
+      new ResizeObserver(applyCueSize).observe(wrapper);
+    } else {
+      window.addEventListener("resize", applyCueSize);
+    }
+
+    let video = null;
+
+    const createVideo = () => {
+      // Ab 768 px Viewport die 1080p-Fassung, darunter 720p.
+      const wide = window.matchMedia("(min-width: 768px)").matches;
+      const src = wide ? sources.src1080 : sources.src720;
+
+      if (!src) return null;
+
+      const element = document.createElement("video");
+
+      // CORS mode: required for the cross-origin <track> (server sends ACAO *).
+      element.crossOrigin = "anonymous";
+      element.src = src;
+      element.poster = sources.poster || "";
+      element.controls = false;
+      element.preload = "auto";
+
+      // Inline auf dem iPhone: playsInline allein reicht älteren iOS-Safari
+      // nicht, die brauchen zusätzlich die beiden Attribute.
+      element.playsInline = true;
+      element.setAttribute("playsinline", "");
+      element.setAttribute("webkit-playsinline", "");
+
+      // Bild-in-Bild, AirPlay und Cast sperren — sonst blendet iOS die
+      // nativen Schaltflächen trotz controls=false ein.
+      element.disablePictureInPicture = true;
+      element.setAttribute("disablepictureinpicture", "");
+      element.disableRemotePlayback = true;
+      element.setAttribute("disableremoteplayback", "");
+      element.setAttribute("x-webkit-airplay", "deny");
+
+      element.setAttribute(
+        "controlslist",
+        "nodownload nofullscreen noremoteplayback"
+      );
+      element.setAttribute("style", VIDEO_STYLE);
+      element.setAttribute("aria-label", sources.title);
+
+      // Ohne native Controls ist das Video nicht fokussierbar — ohne tabindex
+      // gäbe es keine Tastatur-Bedienung.
+      element.tabIndex = 0;
+      element.setAttribute("tabindex", "0");
+
+      if (sources.vtt) {
+        const track = document.createElement("track");
+
+        track.kind = "subtitles";
+        track.srclang = "de";
+        track.label = "Deutsch";
+        track.default = true;
+        track.src = sources.vtt;
+
+        element.appendChild(track);
+      }
+
+      element.addEventListener("playing", () => {
+        wrapper.classList.add("is-loaded");
+        wrapper.classList.remove("is-paused");
+        button.classList.remove("is-loading");
+        button.setAttribute("aria-label", "Video pausieren");
+      });
+
+      element.addEventListener("pause", () => {
+        if (element.ended) return;
+
+        wrapper.classList.add("is-paused");
+        button.setAttribute("aria-label", "Video abspielen");
+      });
+
+      // Am Ende zurück in den Ausgangszustand: Vorschaubild und Play-Button.
+      element.addEventListener("ended", () => {
+        wrapper.classList.remove("is-loaded");
+        wrapper.classList.remove("is-paused");
+        element.currentTime = 0;
+        button.setAttribute("aria-label", "Video abspielen");
+      });
+
+      element.addEventListener("error", () => {
+        wrapper.classList.remove("is-loaded");
+        wrapper.classList.remove("is-paused");
+        button.classList.remove("is-loading");
+      });
+
+      // Klick auf das laufende Video pausiert, erneuter Klick spielt weiter.
+      element.addEventListener("click", () => {
+        if (element.paused) {
+          element.play().catch(() => {});
+        } else {
+          element.pause();
+        }
+      });
+
+      // Doppelklick würde sonst den Vollbildmodus auslösen.
+      element.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+      });
+
+      // Kontextmenü sperren: Safari und Firefox bieten dort sonst
+      // "Bild-in-Bild", "Video sichern" und "Vollbild" an.
+      element.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+      });
+
+      // Tastatur: preventDefault verhindert bei der Leertaste zusätzlich das
+      // Scrollen der Seite.
+      element.addEventListener("keydown", (event) => {
+        if (!isToggleKey(event)) return;
+
+        event.preventDefault();
+
+        if (element.paused) {
+          element.play().catch(() => {});
+        } else {
+          element.pause();
+        }
+      });
+
+      wrapper.appendChild(element);
+
+      return element;
+    };
+
+    const activate = () => {
+      if (button.classList.contains("is-loading")) return;
+
+      if (!video) {
+        video = createVideo();
+
+        if (!video) return;
+
+        button.classList.add("is-loading");
+        video.play().catch(() => button.classList.remove("is-loading"));
+
+        return;
+      }
+
+      if (video.paused) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    };
+
+    button.addEventListener("click", activate);
+
+    // Space und Enter lösen den Button nativ aus — weil preventDefault (gegen
+    // das Scrollen) diesen synthetischen Klick unterdrückt, schaltet hier der
+    // Aufruf selbst um. "k" kommt zusätzlich dazu.
+    button.addEventListener("keydown", (event) => {
+      if (!isToggleKey(event)) return;
+
+      event.preventDefault();
+      activate();
+    });
+  });
+});
+</script>

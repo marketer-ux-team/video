@@ -1,0 +1,49 @@
+<script src="https://file.marketer-ux.de/files-ux/js-player/js-player.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+           const controls = [
+              'play-large', // The large play button in the center
+            //'restart', // Restart playback
+            //'rewind', // Rewind by the seek time (default 10 seconds)
+              'play', // Play/pause playback
+            //'fast-forward', // Fast forward by the seek time (default 10 seconds)
+              'progress', // The progress bar and scrubber for playback and buffering
+            //'current-time', // The current time of playback
+            //'duration', // The full duration of the media
+              'mute', // Toggle mute
+              'volume', // Volume control
+            //'captions', // Toggle captions
+            //'settings', // Settings menu
+            //'pip', // Picture-in-picture (currently Safari only)
+            //'airplay', // Airplay (currently Safari only)
+            //'download', // Show a download button with a link to either the current source or a custom URL you specify in your options
+            'fullscreen' // Toggle fullscreen
+        ];
+        const player = Plyr.setup('.js-player', { controls });
+    });
+</script>
+
+
+<script>
+// Get URL Parameters into Variable
+const GetURLParameter = (sParam) => {
+  let sPageURL = window.location.search.substring(1);
+  let sURLVariables = sPageURL.split("&");
+  for (let i = 0; i < sURLVariables.length; i++) {
+    let sParameterName = sURLVariables[i].split("=");
+    if (sParameterName[0] == sParam) {
+      return decodeURIComponent(sParameterName[1]);
+    }
+  }
+};
+let inviteeFullName = GetURLParameter("invitee_full_name");
+let inviteeEmail = GetURLParameter("invitee_email");
+let eventStartTime = new Date(GetURLParameter("event_start_time"));
+let eventEndTime = new Date(GetURLParameter("event_end_time"));
+eventStartTime
+// Put Variable into Text-Span
+document.getElementById("invitee-name").innerHTML = inviteeFullName;
+document.getElementById("event-start-time").innerHTML = eventStartTime.toLocaleDateString('de-DE') + " " + eventStartTime.toISOString().replace(/^[^:]*([0-2]\d:[0-5]\d).*$/, "$1");
+document.getElementById("event-end-time").innerHTML = eventEndTime.toLocaleDateString('de-DE') + " " + eventEndTime.toISOString().replace(/^[^:]*([0-2]\d:[0-5]\d).*$/, "$1");
+</script>

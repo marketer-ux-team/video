@@ -298,6 +298,57 @@ Sonderfall `/leadgenerierung`: das alte Video saß per `w-node`-Regel in Spalte 
 Die Regel gehört zur Element-ID und fällt mit dem alten Element weg; `leadgen-embed.html` setzt die
 Platzierung deshalb selbst (`.header_component > .w-embed:has(> .mux_video-wrapper)`).
 
+## Restliche Videos auf marketer-ux.com (Stand 2026-10-14)
+
+Kompletter Crawl (496 URLs inkl. noindex-, Danke- und EN-Seiten): danach lädt live keine Seite mehr
+Wistia, Vimeo oder Videos von `file.marketer-ux.de`. YouTube-Einbettungen (Artikel, Glossar, Cases)
+bleiben bewusst. Ausgenommen: `/drafts/redisign-2026` (Entwurf).
+
+**Klick-Videos mit Ton** → bestehender Player, Dateien `webflow/danke/<slug>-embed.html`
+(aus `webflow-agentur-embed.html`, ohne `data-video-vtt` — keine Untertitel vorhanden):
+
+| Seite | Quelle vorher | Slug |
+|---|---|---|
+| `/forms/danke` (Komponente `video-danke_component`), `/forms/danke-nio-event` | Plyr `danke-video-aleksey.mp4` / Wistia `m6gtlmo2sm` (identische Datei) | `danke-aleksey` |
+| `/forms/danke-chris` | Wistia `h9ha7yshgw` | `danke-chris` |
+| `/forms/danke-termin` | Wistia `7fnlrwx140` | `danke-termin` |
+| `/landing/branding-report` (+ EN) | Plyr `branding-magazin.mp4` (nur 720p) | `branding-report` |
+| `/landing/danke-branding-report` | Plyr `branding-report-danke.mp4` | `danke-branding-report` |
+| `/weihnachten-2025-jan-bahmann` | Vimeo `1139325251` (4K) | `weihnachten-2025` |
+| `/landing/webflow-agentur` | Wistia `8xt6hsren6` | vorhandenes `webflow-agentur`-Embed (mit Untertiteln) |
+
+Auf den Plyr-Seiten lag das Embed in `.video-player-container` (per IX2 `opacity:0`) unter einem
+Vorschau-Overlay. Das Embed wurde direkt in `.video-player_component` verschoben, Container und
+Overlay gelöscht, und Plyr-CSS/JS samt `Plyr.setup('.js-player')` aus dem Page-Code entfernt —
+sonst hätte Plyr das Embed (Klasse `js-player`) übernommen. Originale: `webflow/backup/page-code-2026-10-14/`.
+
+**Stumme Loops** (Wistia `autoPlay`+`loop` ohne Controls, Vimeo `background=1`; alle Tonspuren
+-91 dB) → `webflow/loops/<slug>-loop-embed.html` aus `webflow/loop-embed-template.html`: natives
+`<video muted loop playsinline>`, lädt per IntersectionObserver erst nahe am Viewport, pausiert
+außerhalb, `pointer-events:none` (Portfolio-Karten liegen in Links). Dateien
+`hero/<slug>-loop-v1.mp4` (ohne Ton, ≤30 fps) und `-loop-poster-v1.webp` (erster Frame).
+
+| Seite | Quelle vorher | Slug |
+|---|---|---|
+| `/branding`, `/webdesign-agentur` | Wistia `ix66qu7emd` (Showreel, stumm) | `showreel` |
+| `/portfolio` Karten | Wistia `saeqtf0aoi`, `xn28209i10` | `esc-loop-720` (vorhanden), `adeleon-preview` |
+| `/portfolio/adeleon` | Wistia `13spy4exzo` | `adeleon-cover` |
+| `/portfolio/atfinity` | Wistia `vdom49zchz`, `sd62n19myx` | `atfinity-feature-1/-2` |
+| `/portfolio/jan-bahmann-redesign` | Wistia `xy09i1u2lw`, `kd2covrxj7`, `hhmwi8x4y3`, `ojaqvbe4q9` | `jb-feature-1/-2/-3/-5` |
+| `/portfolio/rohlmann-steuerberatung` | Wistia `ogtkxpplsz` | `rohlmann-feature-2` |
+| `/portfolio/ib-trader` | Vimeo `871973985` (**gelöscht**, zeigte „Es tut uns leid“) | `ib-trader-cover` aus Webflow-Asset `Portfolio Page-Ib Trader-Cover.mp4` |
+| `/portfolio/westfa-holding` | Vimeo `871975199` (gelöscht) | `westfa-showcase` aus Asset `portfolio page-westfa-showcase.mp4` |
+| `/portfolio/persowave-personalvermittlung` | Vimeo `799141878` (gelöscht) | `persowave-cover` aus Asset `Persowave_Laptopmockup_Webflow.mp4` |
+
+Ebenfalls gelöschte, auf allen Breakpoints per `.hide` unsichtbare Vimeo-Embeds wurden entfernt
+(Startseite, `/branding`, `/webdesign-agentur`, `/portfolio` ×2, `/portfolio/fair-doctors`,
+`/portfolio/newboxes`). Startseite: Wistia-Preconnects (Head, = `home-head.html`) und das tote
+`dd-wistia`-Click-Script (Footer) entfernt; Backup des Vorzustands im selben Backup-Ordner.
+
+Noch übrig, aber ohne Video: Plyr-Script-Includes auf `/autoren/*`, `/case-study/*` (CMS-Templates),
+`/forms/danke-double-opt-in`, `/landing/double-opt-in`, `/funnel/danke`, `/rich-text-components`
+sowie `Plyr.setup` ohne Bibliothek auf einigen Leistungsseiten — toter Code, kein Element `.js-player`.
+
 ## mhp-bonn.de `/patientenberichte` (Stand 2026-10-14)
 
 Kundenseite (Webflow-Site `5fdc7d976138e131eeb1a8f3`, Page `661651a6ce6c80ea23d42dce`). Sieben

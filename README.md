@@ -297,3 +297,20 @@ Datei, beide `data-video-src-*` zeigen darauf. Poster = Wistia-Thumbnail (aus de
 Sonderfall `/leadgenerierung`: das alte Video saß per `w-node`-Regel in Spalte 2 des Header-Grids.
 Die Regel gehört zur Element-ID und fällt mit dem alten Element weg; `leadgen-embed.html` setzt die
 Platzierung deshalb selbst (`.header_component > .w-embed:has(> .mux_video-wrapper)`).
+
+## mhp-bonn.de `/patientenberichte` (Stand 2026-10-14)
+
+Kundenseite (Webflow-Site `5fdc7d976138e131eeb1a8f3`, Page `661651a6ce6c80ea23d42dce`). Sieben
+Wistia-Testimonials als native Webflow-Video-Elemente in `.testimonial-thumbnail`, ersetzt durch je
+ein HtmlEmbed aus `webflow/mhp/mhp-<name>-embed.html`. Dateien: `hero/mhp-<name>-720-v1.mp4` und
+`-poster-v1.webp` für jan (`el29rbm3f2`), joana (`nubt8re9bh`), thorsten (`avpk1eekfo`), wolfgang
+(`4jx29llbjr`), ibrahim (`43vqurzkda`), christina (`j03e764vyk`), klaus (`12shautvoi`).
+
+Abweichungen zur marketer-ux-Fassung:
+
+- Alle Quellen nur 720p, Wistia hat **keine Untertitel** — `data-video-vtt` fehlt, das Script legt
+  dann keinen `<track>` an.
+- `.testimonial-thumbnail` ist Flex: das Embed bekommt per `:has()`-Regel `width: 100%`, sonst 0 px.
+- Sieben Player auf einer Seite: startet einer, pausieren alle anderen (`play`-Listener).
+- Das Script steckt in jedem der sieben Embeds; `data-video-ready` sorgt dafür, dass jeder Button nur
+  einmal verdrahtet wird.
